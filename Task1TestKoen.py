@@ -1,3 +1,5 @@
+import os
+from select import select
 import numpy as np
 from numpy import genfromtxt
 from os import path
@@ -9,6 +11,7 @@ dataFileName = './Data/Genes/data.csv'
 labelsFileName = './Data/Genes/labels.csv'
 
 # Storage of data to speed up debugging
+labelsFile = './PreProcessedData/labels.npy'
 rawDataFile = './PreProcessedData/rawData.npy'
 rawLabelsFile = './PreProcessedData/rawLabels.npy'
 preProcessedDataFile = './PreProcessedData/preProcessedData.npy'
@@ -19,8 +22,8 @@ reProcessPreprocessedData = False
 
 class Pipeline:
     def __init__(self):
-        if (path.exists(rawDataFile)==False or path.exists(rawLabelsFile)==False or reProcessRawData):
-            self.labelsDict ={ }
+        if (path.exists(labelsFile)==False or path.exists(rawDataFile)==False or path.exists(rawLabelsFile)==False or reProcessRawData):
+            self.labelsDict =[]
             self.rawData = genfromtxt(dataFileName, skip_header=True, delimiter=',')[:,1:] # shape is 802x20532 
 
             # Read the labels files, and assign a class number to each label text
@@ -30,15 +33,18 @@ class Pipeline:
             for label in readLabels:
                 labelValue = label[0]
                 if labelValue in self.labelsDict:
-                    encodedLabel = self.labelsDict[labelValue]
+                    encodedLabel = self.labelsDict.index(labelValue)
                     self.rawLabels.append(encodedLabel)
                 else:
-                    self.labelsDict[labelValue]=dictIndex
-                    dictIndex+=1
+                    self.rawLabels.append(len(self.labelsDict))
+                    self.labelsDict.append(labelValue)  
+            self.labelsDict = np.array(self.labelsDict, dtype=str)
+            np.save(labelsFile, self.labelsDict)
             np.save(rawDataFile, self.rawData)
             np.save(rawLabelsFile, self.rawLabels)
         else:
             self.rawData = np.load(rawDataFile)
+            self.labelsDict= np.load(labelsFile, allow_pickle=True)
             self.rawLabels = np.load(rawLabelsFile)
     
     def preProcess(self):
@@ -54,36 +60,77 @@ class Pipeline:
             self.preProcessedData = np.load(preProcessedDataFile)
             self.preProcessedLabels = np.load(preProcessedLabelsFile)
 
-
     def reduceDimension(self):
-
-        nanArguments = np.argwhere(np.isnan(self.preProcessedData))
-
-
-        pca = PCA(n_components=2)
-        principalComponents = pca.fit_transform(self.preProcessedData)
+        numberOfComponents=1
+        pca = PCA(numberOfComponents)
+        self.reducedDimensionsData = pca.fit_transform(self.preProcessedData)
         
-        fig = plt.figure(figsize = (8,8))
-        plt.scatter(principalComponents[:,0],principalComponents[:,1])
-        # ax = fig.add_subplot(1,1,1) 
-        # ax.set_xlabel('Principal Component 1', fontsize = 15)
-        # ax.set_ylabel('Principal Component 2', fontsize = 15)
-        # ax.set_title('2 component PCA', fontsize = 20)
-        # ax.scatter()
-        plt.show()
-        # targets = ['Iris-setosa', 'Iris-versicolor', 'Iris-virginica']
-        # colors = ['r', 'g', 'b']
-        # for target, color in zip(targets,colors):
-        #     indicesToKeep = finalDf['target'] == target
-        #     ax.scatter(finalDf.loc[indicesToKeep, 'principal component 1']
-        #             , finalDf.loc[indicesToKeep, 'principal component 2']
-        #             , c = color
-        #             , s = 50)
-        # ax.legend(targets)
-        # ax.grid()
+        if (numberOfComponents <= 3):
+            fig = plt.figure(figsize = (8,8))
+            if numberOfComponents == 3:
+                ax = fig.add_subplot(projection='3d')
+            else:
+                ax = fig.add_subplot()
+                
+            for index, label in enumerate(self.labelsDict):
+                indexesOfClass = self.preProcessedLabels == index
+                points = self.reducedDimensionsData[indexesOfClass] 
+                
+                if numberOfComponents == 1:
+                    ax.hist(points, alpha=0.5)
+                elif numberOfComponents == 2:
+                    ax.scatter(points[0],points[1])
+                else:
+                    ax.scatter(points[0],points[1],points[2])
+            plt.xlabel("Principal component 1")
+            plt.ylabel("Principal component 2")
+            plt.title("PCA")
+            plt.savefig(f"Figures{os.sep}PCA")
+    
+    def splitData(self):
+        testSetFactor = 0.1
+
+        # Shuffle the data set using a seed
+        p = np.random.RandomState(0).permutation(len(self.reducedDimensionsData))
+        dataX = self.reducedDimensionsData[p]
+        dataY = self.preProcessedLabels[p]
+        testSetCount = len(dataX)*testSetFactor
+        self.trainX = dataX[0:len(dataX)-testSetCount]
+        self.trainY = dataY[0:len(dataY)-testSetCount]
+        self.testX = dataX[len(dataX)-testSetCount,len(dataX)]
+        self.testY = dataY[len(dataY)-testSetCount,len(dataY)]
+
+    def crossValidate(self):
+        model = Model()
+        kFolds = 10
+        # TODO: for training cost sensitive error function becuase number of samples per class
+        foldSize = len(self.trainX)/kFolds
+        errors = []
+        for fold in range(kFolds):
+            print("Fold " + str(fold+1))
+            # Split the data in training and validation data
+            valSetIdx = np.arange(fold*foldSize,(fold+1)*foldSize, 1, int)
+            trainX = np.delete(self.trainX, valSetIdx,axis=0)
+            trainY = np.delete(self.trainY, valSetIdx,axis=0)
+            valX = self.trainX[valSetIdx]
+            valY = self.trainY[valSetIdx]
+            
+            # Train and validate the model
+            model.train(trainX, trainY, 100)
+            errors.append(model.test(valX, valY))
+        
+
+class Model:
+    def __init__():
+        pass
+    def train(self):
+        pass
+    def test(self):
+        pass
 
      
 if __name__=="__main__":
     pipeline = Pipeline()
     pipeline.preProcess()
     pipeline.reduceDimension()
+    pipeline.splitData()
