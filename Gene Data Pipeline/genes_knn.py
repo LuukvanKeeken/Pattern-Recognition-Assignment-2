@@ -15,11 +15,11 @@ dataFileName = '../Data/Genes/data.csv'
 labelsFileName = '../Data/Genes/labels.csv'
 
 # Storage of data to speed up debugging
-labelsFile = '../PreProcessedData/labels.npy'
-rawDataFile = '../PreProcessedData/rawData.npy'
-rawLabelsFile = '../PreProcessedData/rawLabels.npy'
-preProcessedDataFile = '../PreProcessedData/preProcessedData.npy'
-preProcessedLabelsFile = '../PreProcessedData/preProcessedLabels.npy'
+labelsFile = './PreProcessedData/labels.npy'
+rawDataFile = './PreProcessedData/rawData.npy'
+rawLabelsFile = './PreProcessedData/rawLabels.npy'
+preProcessedDataFile = './PreProcessedData/preProcessedData.npy'
+preProcessedLabelsFile = './PreProcessedData/preProcessedLabels.npy'
 
 reProcessRawData = False
 reProcessPreprocessedData = False
@@ -132,8 +132,8 @@ class Pipeline:
             # plt.savefig(f"Figures{os.sep}PCA")
         return reducedDimensionsData
     
-    def validation(self, data, labels):
-        model = Model(5, 16)
+    def validation(self, data, labels, k):
+        model = Model(k, 16)
         # TODO: for training cost sensitive error function becuase number of samples per class
         
         accuracies = []
@@ -150,7 +150,7 @@ class Pipeline:
             accuracies.append(model.test(valX, valY))
 
         accuracy = np.mean(accuracies)
-        print("Done, average accuracy is: " + str(round(accuracy,3))+"%")
+        print("Done, average validation accuracy is: " + str(round(accuracy,3))+"%")
         return accuracy
 
    
@@ -185,18 +185,25 @@ if __name__=="__main__":
 
     pipeline.splitData()
     
-    for n_components in range(10, 15):
-        
-
-
-
-    maxNumberOfDimensions = 10
+    min_num_of_components = 600
+    max_num_of_components = 602
+    min_k = 1
+    max_k = 15
     accuracies = []
-    for dimension in range(1,maxNumberOfDimensions+1):
-        print("Grid search "+ str(dimension))
-        dataReduced = pipeline.dimensionReduction(pipeline.dataX, pipeline.dataY, dimension)
-        accuracies.append(pipeline.validation(dataReduced, pipeline.dataY))#, kFolds=10))
+    highest_acc = -1
+    best_hyperparams = {}
+    for n_components in range(min_num_of_components, max_num_of_components+1):
+        dataReduced = pipeline.dimensionReduction(pipeline.trainX, pipeline.trainY, n_components)
+        for k in range(min_k, max_k+1, 2):
+            print("n_components = " + str(n_components) + ", k = " + str(k))
+            accuracy = pipeline.validation(dataReduced, pipeline.trainY, k)
+            accuracies.append(accuracy)#, kFolds=10))
+            if accuracy > highest_acc:
+                highest_acc = accuracy
+                best_hyperparams = {'n_components' : n_components, 'k' : k}
 
+    print(best_hyperparams)
+    print(highest_acc)
     fig = plt.figure(figsize = (8,8))
     plt.plot(range(1,len(accuracies)+1), accuracies)
     
