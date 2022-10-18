@@ -9,7 +9,7 @@ preProcessedData = np.load(preProcessedDataFile)
 preProcessedLabels = np.load(preProcessedLabelsFile)
 print(preProcessedData)
 
-n_comps = 20
+n_comps = 50
 pca = PCA(n_components=n_comps)
 pca.fit(preProcessedData)
 
@@ -26,7 +26,7 @@ plt.step(range(1, n_comps+1), cum_exp_var, where='mid',
 
 plt.ylabel('Explained variance percentage')
 plt.xlabel('Principal component index')
-plt.xticks(ticks=np.arange(1,n_comps+1))
+plt.xticks(ticks=np.arange(1,n_comps+1, 2))
 plt.legend(loc='best')
 plt.tight_layout()
 
