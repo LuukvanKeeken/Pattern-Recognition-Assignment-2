@@ -1,4 +1,5 @@
 import os
+from pyexpat import model
 from random import sample
 import numpy as np
 from numpy import genfromtxt
@@ -7,6 +8,8 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
+from sklearn.mixture import GaussianMixture
+import pandas as pd
 
 # File locations
 dataFileName = './Data/Genes/data.csv'
@@ -20,7 +23,7 @@ preProcessedDataFile = './PreProcessedData/preProcessedData.npy'
 preProcessedLabelsFile = './PreProcessedData/preProcessedLabels.npy'
 
 reProcessRawData = False
-reProcessPreprocessedData = False
+reProcessPreprocessedData = True
 
 class Pipeline:
     def __init__(self):
@@ -40,7 +43,25 @@ class Pipeline:
             self.preProcessedData = self.rawData - np.mean(self.rawData, axis=0) 
             self.preProcessedData /= np.std(self.preProcessedData, axis=0)
             # when a column is zero, dividing by std is /0, which is not a number (nan). Replace them by 0.0
-            self.preProcessedData[np.isnan(self.preProcessedData)] = 0.0
+            nanColumns = np.isnan(self.preProcessedData[0])
+            self.preProcessedData = np.delete(self.preProcessedData,nanColumns,axis=1)
+            #self.preProcessedData[np.isnan(self.preProcessedData)] = 0.0
+
+            # Create correlation matrix
+            # df = pd.DataFrame( self.preProcessedData)#, columns = ['Column_A','Column_B','Column_C'])
+            # #corr_matrix = df.corr().abs()
+            # corr_matrix = np.corrcoef(self.preProcessedData,)
+            # #corr_matrix = self.preProcessedData.corrcoef()
+
+            # # Select upper triangle of correlation matrix
+            # upper = corr_matrix[(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))]
+
+            # # Find features with correlation greater than 0.95
+            # to_drop = [column for column in upper.columns if any(upper[column] > 0.95)]
+
+            # # Drop features 
+            # df.drop(to_drop, axis=1, inplace=True)
+            # self.preProcessedData = df.to_numpy()
 
             # Process the labels and encode them
             self.labelsDict =[]
@@ -91,7 +112,7 @@ class Pipeline:
 
 
     def splitData(self):
-        testSetFactor = 0.1
+        testSetFactor = 0.2
         # Shuffle the data set using a seed
         p = np.random.RandomState(0).permutation(len(self.preProcessedData))
         self.dataX = self.preProcessedData[p]
@@ -103,9 +124,13 @@ class Pipeline:
         self.testY = self.dataY[len(self.dataY)-testSetCount:len(self.dataY)]
 
 
+    def dimensionReductionTestData(self, data):
+        reducedTestData = self.pca.transform(data)
+        return reducedTestData
+
     def dimensionReduction(self, data, labels, numberOfComponents):
-        pca = PCA(numberOfComponents)
-        reducedDimensionsData = pca.fit_transform(data)
+        self.pca = PCA(numberOfComponents)
+        reducedDimensionsData = self.pca.fit_transform(data)
         
         if (numberOfComponents <= 3):
             fig = plt.figure(figsize = (8,8))
@@ -149,6 +174,86 @@ class Pipeline:
 
         accuracy = np.mean(accuracies)
         print("Done, average accuracy is: " + str(round(accuracy,3))+"%")
+        return accuracy
+
+    def clustering(self, datasetX, datasetY):
+        #datasetX = self.trainX
+        #datasetY = self.trainY
+        
+        AIC = []
+        gmms = []
+        componentsRange = range(5,15,1)
+        for components in componentsRange:
+            np.random.seed(42)
+            newGmm = GaussianMixture(n_components=components, random_state=42)
+                                    # covariance_type='full', 
+                                    # tol=1e-10,
+                                    # reg_covar=1e-10,
+                                    # max_iter=100, 
+                                    # n_init=20,
+                                    # init_params='kmeans', 
+                                    # weights_init=None, 
+                                    # means_init=None, 
+                                    # precisions_init=None, 
+                                    # random_state=None, 
+                                    # warm_start=False, 
+                                    # verbose=0,
+                                    # verbose_interval=10)
+            newGmm.fit(datasetX) 
+            AIC.append(newGmm.aic(datasetX))
+            gmms.append(newGmm)
+            #BIC = gmm.big(datasetX)
+
+        plt.close()
+        plt.cla()
+        plt.clf()
+        fig = plt.figure(figsize = (8,8))
+        plt.plot(componentsRange,AIC)
+        
+        plt.xlabel("Components")
+        plt.ylabel("AIC")
+        plt.title("AIC of MoG")
+        plt.savefig(f"Figures{os.sep}MoG")
+
+
+
+        gmm = gmms[np.argmin(AIC)]
+        gmm.n_components
+        finalComponents = gmm.n_components #np.argmin(AIC)
+
+        
+        #gmm = GaussianMixture(n_components=finalComponents, random_state=123)
+        #gmm.fit(datasetX) 
+
+        
+        # Match the labels of the MoG with the real labels. 
+        labels = np.zeros((finalComponents, 5))
+        for i in range(len(datasetY)):
+            realLabel = datasetY[i]
+            image = datasetX[i]
+            image = image.reshape(1,-1)
+            classPredictions = int(gmm.predict(image))
+            labels[classPredictions][realLabel] += 1
+        modelLabels = [0] * finalComponents
+        good = 0
+        for index in range(finalComponents):
+            mostCount = np.argmax(labels[index])
+            good += labels[index][mostCount]
+            modelLabels[index] = mostCount
+        
+        # calculate the accuracy of the trained model on the training data
+        accuracy = good/len(datasetY)
+
+        return gmm, modelLabels
+
+    def predictMoG(self, gmm, modelLabels, testData, testLabels):
+        correct = 0
+        for sample, label in zip(testData,testLabels):
+            sample = sample.reshape(1,-1)
+            prediction = modelLabels[int(gmm.predict(sample))]
+            if prediction == label:
+                correct+=1
+        accuracy = correct/len(testLabels)
         return accuracy
 
     # def validation(self, data, labels, kFolds):
@@ -201,10 +306,16 @@ if __name__=="__main__":
     pipeline = Pipeline()
     pipeline.preProcess()
     pipeline.exploreData()
-
-
     pipeline.splitData()
-    
+    #mmg, modelLabels = pipeline.clustering(pipeline.testX, pipeline.testY)
+    dataReducedTraining = pipeline.dimensionReduction(pipeline.trainX, pipeline.trainY, 20)
+
+
+    mmg, modelLabels = pipeline.clustering(dataReducedTraining, pipeline.trainY)
+
+    dataReducedTesting = pipeline.dimensionReductionTestData(pipeline.testX)
+    pipeline.predictMoG(mmg, modelLabels, dataReducedTesting, pipeline.testY)
+
     maxNumberOfDimensions = 10
     accuracies = []
     for dimension in range(1,maxNumberOfDimensions+1):
