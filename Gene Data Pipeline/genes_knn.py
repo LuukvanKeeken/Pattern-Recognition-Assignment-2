@@ -10,15 +10,15 @@ from sklearn import metrics
 from sklearn.neighbors import KNeighborsClassifier
 
 # File locations
-dataFileName = './Data/Genes/data.csv'
-labelsFileName = './Data/Genes/labels.csv'
+dataFileName = '../Data/Genes/data.csv'
+labelsFileName = '../Data/Genes/labels.csv'
 
 # Storage of data to speed up debugging
-labelsFile = './PreProcessedData/labels.npy'
-rawDataFile = './PreProcessedData/rawData.npy'
-rawLabelsFile = './PreProcessedData/rawLabels.npy'
-preProcessedDataFile = './PreProcessedData/preProcessedData.npy'
-preProcessedLabelsFile = './PreProcessedData/preProcessedLabels.npy'
+labelsFile = '../PreProcessedData/labels.npy'
+rawDataFile = '../PreProcessedData/rawData.npy'
+rawLabelsFile = '../PreProcessedData/rawLabels.npy'
+preProcessedDataFile = '../PreProcessedData/preProcessedData.npy'
+preProcessedLabelsFile = '../PreProcessedData/preProcessedLabels.npy'
 
 reProcessRawData = False
 reProcessPreprocessedData = False
@@ -128,7 +128,7 @@ class Pipeline:
             plt.xlabel("Principal component 1")
             plt.ylabel("Principal component 2")
             plt.title("PCA")
-            plt.savefig(f"Figures{os.sep}PCA")
+            # plt.savefig(f"Figures{os.sep}PCA")
         return reducedDimensionsData
     
     def validation(self, data, labels):
@@ -205,7 +205,7 @@ if __name__=="__main__":
 
     pipeline.splitData()
     
-    maxNumberOfDimensions = 15
+    maxNumberOfDimensions = 10
     accuracies = []
     for dimension in range(1,maxNumberOfDimensions+1):
         print("Grid search "+ str(dimension))
@@ -218,4 +218,4 @@ if __name__=="__main__":
     plt.xlabel("Dimensions")
     plt.ylabel("Accuracy")
     plt.title("Accuracies with different dimensions")
-    plt.savefig(f"Figures{os.sep}GridSearch")
+    # plt.savefig(f"..{os.sep}Figures{os.sep}GridSearch")
