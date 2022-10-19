@@ -39,6 +39,10 @@ class DataHandler:
             ax.title.set_text(self.class_labels[idx])
             plt.imshow(self.img_data[idx])
 
+    def showClassDistribution(self):
+        plt.hist(self.class_labels)
+        plt.show()
+
     def convertLabelsToNumeric(self):
         # Convert class labels to numeric values
         target_dict = {k: v for v, k in enumerate(np.unique(self.class_labels))}
