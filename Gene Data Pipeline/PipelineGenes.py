@@ -177,84 +177,6 @@ class Pipeline:
         print("Done, average accuracy is: " + str(round(accuracy,3))+"%")
         return accuracy
 
-    def clustering(self, datasetX, datasetY):
-        #datasetX = self.trainX
-        #datasetY = self.trainY
-        
-        AIC = []
-        gmms = []
-        componentsRange = range(5,16,1)
-        for components in componentsRange:
-            #np.random.seed(42)
-            np.random.seed(42)
-            newGmm = GaussianMixture(n_components=components)#, random_state=42)
-                                    # covariance_type='full', 
-                                    # tol=1e-10,
-                                    # reg_covar=1e-10,
-                                    # max_iter=100, 
-                                    # n_init=20,
-                                    # init_params='kmeans', 
-                                    # weights_init=None, 
-                                    # means_init=None, 
-                                    # precisions_init=None, 
-                                    # random_state=None, 
-                                    # warm_start=False, 
-                                    # verbose=0,
-                                    # verbose_interval=10)
-            newGmm.fit(datasetX) 
-            AIC.append(newGmm.aic(datasetX))
-            gmms.append(newGmm)
-            #BIC = gmm.big(datasetX)
-
-        plt.close()
-        plt.cla()
-        plt.clf()
-        fig = plt.figure(figsize = (8,8))
-        plt.plot(componentsRange,AIC)
-        
-        plt.xlabel("Components")
-        plt.ylabel("AIC")
-        plt.title("AIC of MoG")
-        plt.savefig(f"Figures{os.sep}MoG")
-
-
-
-        gmm = gmms[np.argmin(AIC)]
-        gmm.n_components
-        finalComponents = gmm.n_components
-        
-        # Match the labels of the MoG with the real labels. 
-        labels = np.zeros((finalComponents, 5))
-        for i in range(len(datasetY)):
-            realLabel = datasetY[i]
-            image = datasetX[i]
-            image = image.reshape(1,-1)
-            classPredictions = int(gmm.predict(image))
-            labels[classPredictions][realLabel] += 1
-        modelLabels = [0] * finalComponents
-        good = 0
-        for index in range(finalComponents):
-            mostCount = np.argmax(labels[index])
-            good += labels[index][mostCount]
-            modelLabels[index] = mostCount
-        
-        # calculate the accuracy of the trained model on the training data
-        accuracy = good/len(datasetY)
-
-        return gmm, modelLabels
-
-    def predictMoG(self, gmm, modelLabels, testData, testLabels):
-        correct = 0
-        for sample, label in zip(testData,testLabels):
-            sample = sample.reshape(1,-1)
-            prediction = modelLabels[int(gmm.predict(sample))]
-            if prediction == label:
-                correct+=1
-        accuracy = correct/len(testLabels)
-        print(accuracy)
-        return accuracy
-
-
 if __name__=="__main__":
     pipeline = Pipeline()
     pipeline.exploreData()
@@ -269,18 +191,9 @@ if __name__=="__main__":
     for pcaComponents in range(estimatedComponents-10, estimatedComponents+10, 2):
         print("Search for PCA component "+ str(pcaComponents))
         trainingFeatures = pipeline.featureExtraction(pcaComponents)
-        pipeline.validation(modelMoG,trainingFeatures, pipeline.trainY)
-        pipeline.validation(modelLR,trainingFeatures, pipeline.trainY)
-        pipeline.validation(modelKnn,trainingFeatures, pipeline.trainY)
-        
+        #pipeline.validation(modelMoG,trainingFeatures, pipeline.trainY)
+        #pipeline.validation(modelLR,trainingFeatures, pipeline.trainY)
+        pipeline.validation(modelKnn,trainingFeatures, pipeline.trainY) 
 
     # TODO: finally, evaluate all models on the test data
     reducedTestData = pipeline.pca.transform(pipeline.testX)
-
-    # fig = plt.figure(figsize = (8,8))
-    # plt.plot(range(1,len(accuracies)+1), accuracies)
-    
-    # plt.xlabel("Dimensions")
-    # plt.ylabel("Accuracy")
-    # plt.title("Accuracies with different dimensions")
-    # plt.savefig(f"Figures{os.sep}GridSearch")
