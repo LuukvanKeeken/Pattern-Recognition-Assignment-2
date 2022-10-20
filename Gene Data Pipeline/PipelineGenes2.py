@@ -191,7 +191,6 @@ if __name__=="__main__":
     estimatedComponents = pipeline.pcaSearch()
 
     trainingFeatures = pipeline.featureExtraction(estimatedComponents)
-    print(len(trainingFeatures))
     input_data = trainingFeatures
     targets = pipeline.trainY
 
