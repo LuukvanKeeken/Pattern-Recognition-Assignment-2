@@ -2,21 +2,24 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.decomposition import PCA
 
-preProcessedDataFile = '../PreProcessedData/preProcessedData.npy'
-preProcessedLabelsFile = '../PreProcessedData/preProcessedLabels.npy'
+preProcessedDataFile = './PreProcessedData/preProcessedData.npy'
+preProcessedLabelsFile = './PreProcessedData/preProcessedLabels.npy'
 
 preProcessedData = np.load(preProcessedDataFile)
 preProcessedLabels = np.load(preProcessedLabelsFile)
-print(preProcessedData)
 
-n_comps = 50
+n_comps = 801
 pca = PCA(n_components=n_comps)
 pca.fit(preProcessedData)
 
 exp_var = pca.explained_variance_ratio_ * 100
-print(exp_var)
-print(len(exp_var))
+
 cum_exp_var = np.cumsum(exp_var)
+for i in range(len(cum_exp_var)-1):
+        if (cum_exp_var[i] > 80):
+                print(f"{i+1} components leads to {cum_exp_var[i]} explained variance.")
+                break
+
 
 plt.bar(range(1, n_comps+1), exp_var, align='center',
         label='Individual explained variance')
