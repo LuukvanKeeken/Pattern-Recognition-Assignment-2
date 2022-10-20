@@ -198,8 +198,8 @@ if __name__=="__main__":
     cv_obj = LeaveOneOut()
 
     knn_model = KNeighborsClassifier()
-    knn_parameters = {'n_neighbors':[1,3],'p':[1,2],'weights':('uniform', 'distance')} 
-    knn_search = GridSearchCV(knn_model, knn_parameters, cv = cv_obj, verbose=1)
+    knn_parameters = {'n_neighbors':[1,3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
+    knn_search = GridSearchCV(knn_model, knn_parameters, cv = cv_obj, verbose=2)
     knn_search.fit(input_data, targets)
     
 
