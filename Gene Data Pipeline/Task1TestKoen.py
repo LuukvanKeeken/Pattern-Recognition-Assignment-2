@@ -47,22 +47,6 @@ class Pipeline:
             self.preProcessedData = np.delete(self.preProcessedData,nanColumns,axis=1)
             #self.preProcessedData[np.isnan(self.preProcessedData)] = 0.0
 
-            # Create correlation matrix
-            # df = pd.DataFrame( self.preProcessedData)#, columns = ['Column_A','Column_B','Column_C'])
-            # #corr_matrix = df.corr().abs()
-            # corr_matrix = np.corrcoef(self.preProcessedData,)
-            # #corr_matrix = self.preProcessedData.corrcoef()
-
-            # # Select upper triangle of correlation matrix
-            # upper = corr_matrix[(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))]
-
-            # # Find features with correlation greater than 0.95
-            # to_drop = [column for column in upper.columns if any(upper[column] > 0.95)]
-
-            # # Drop features 
-            # df.drop(to_drop, axis=1, inplace=True)
-            # self.preProcessedData = df.to_numpy()
-
             # Process the labels and encode them
             self.labelsDict =[]
             self.preProcessedLabels = []
@@ -114,9 +98,9 @@ class Pipeline:
     def splitData(self):
         testSetFactor = 0.2
         # Shuffle the data set using a seed
-        p = np.random.RandomState(0).permutation(len(self.preProcessedData))
-        self.dataX = self.preProcessedData[p]
-        self.dataY = self.preProcessedLabels[p]
+        #p = np.random.RandomState(0).permutation(len(self.preProcessedData))
+        self.dataX = self.preProcessedData#[p]
+        self.dataY = self.preProcessedLabels#[p]
         testSetCount = round(len(self.dataX)*testSetFactor)
         self.trainX = self.dataX[0:len(self.dataX)-testSetCount]
         self.trainY = self.dataY[0:len(self.dataY)-testSetCount]
@@ -182,10 +166,11 @@ class Pipeline:
         
         AIC = []
         gmms = []
-        componentsRange = range(5,15,1)
+        componentsRange = range(5,16,1)
         for components in componentsRange:
+            #np.random.seed(42)
             np.random.seed(42)
-            newGmm = GaussianMixture(n_components=components, random_state=42)
+            newGmm = GaussianMixture(n_components=components)#, random_state=42)
                                     # covariance_type='full', 
                                     # tol=1e-10,
                                     # reg_covar=1e-10,
@@ -219,12 +204,7 @@ class Pipeline:
 
         gmm = gmms[np.argmin(AIC)]
         gmm.n_components
-        finalComponents = gmm.n_components #np.argmin(AIC)
-
-        
-        #gmm = GaussianMixture(n_components=finalComponents, random_state=123)
-        #gmm.fit(datasetX) 
-
+        finalComponents = gmm.n_components
         
         # Match the labels of the MoG with the real labels. 
         labels = np.zeros((finalComponents, 5))
@@ -254,31 +234,8 @@ class Pipeline:
             if prediction == label:
                 correct+=1
         accuracy = correct/len(testLabels)
+        print(accuracy)
         return accuracy
-
-    # def validation(self, data, labels, kFolds):
-    #     model = Model()
-    #     # TODO: for training cost sensitive error function becuase number of samples per class
-    #     kFolds = 800
-    #     foldSize = 1# round(len(data)/kFolds)
-    #     accuracies = []
-    #     for fold in range(kFolds):
-    #         print("Fold " + str(fold+1))
-    #         # Split the data in training and validation data
-    #         valSetIdx = np.arange(fold*foldSize,(fold+1)*foldSize, 1, int)
-    #         trainX = np.delete(data, valSetIdx,axis=0)
-    #         trainY = np.delete(labels, valSetIdx,axis=0)
-    #         valX = data[valSetIdx]
-    #         valY = labels[valSetIdx]
-            
-    #         # Train and validate the model
-    #         model.train(trainX, trainY)
-    #         accuracies.append(model.test(valX, valY))
-
-    #     accuracy = np.mean(accuracies)
-    #     print("Done, average accuracy is: " + str(round(accuracy,3))+"%")
-    #     return accuracy
-        
 
 class Model:
     def __init__(self):
@@ -307,15 +264,15 @@ if __name__=="__main__":
     pipeline.preProcess()
     pipeline.exploreData()
     pipeline.splitData()
-    #mmg, modelLabels = pipeline.clustering(pipeline.testX, pipeline.testY)
+
+    #pipeline.validation(pipeline.trainX, pipeline.trainY)
+
     dataReducedTraining = pipeline.dimensionReduction(pipeline.trainX, pipeline.trainY, 20)
-
-
     mmg, modelLabels = pipeline.clustering(dataReducedTraining, pipeline.trainY)
 
     dataReducedTesting = pipeline.dimensionReductionTestData(pipeline.testX)
     pipeline.predictMoG(mmg, modelLabels, dataReducedTesting, pipeline.testY)
-
+    
     maxNumberOfDimensions = 10
     accuracies = []
     for dimension in range(1,maxNumberOfDimensions+1):

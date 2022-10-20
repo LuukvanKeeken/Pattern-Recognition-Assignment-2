@@ -15,7 +15,9 @@ if __name__=="__main__":
     dh = DataHandler()
     dh.loadData(data_dir, IMG_WIDTH, IMG_HEIGHT)
 
+    dh.showClassDistribution()
     dh.showExampleImages()
+    
 
     target_dict = dh.convertLabelsToNumeric()
 
