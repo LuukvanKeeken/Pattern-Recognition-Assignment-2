@@ -14,23 +14,19 @@ class ModelLR:
         pass
 
     def train(self, trainX, trainY, classWeights):
-        self.regressionModel = LogisticRegression(random_state=16, max_iter=10000, class_weight=classWeights)
+        self.regressionModel = LogisticRegression(random_state=16, max_iter=10000, class_weight='balanced')
         self.regressionModel.fit(trainX, trainY)
 
     def test(self, testX, testY):
         predictY = self.regressionModel.predict(testX)
-        #cnf_matrix = metrics.confusion_matrix(testY, predictY)   
-        #print(cnf_matrix)
         accuracy = testY==predictY
-        # correct = 0
-        # for test, predict in zip(testY, predictY):
-        #     if (test==predict):
-        #         correct +=1
-        # accuracy = correct/len(testY)
         return accuracy
 
 class ModelKNN:
-    def __init__(self, k, seed):
+    def __init__(self, parameterSet):
+        k = parameterSet['k']
+        p = parameterSet['p']
+        k = parameterSet['k']
         self.knn_model = KNeighborsClassifier(n_neighbors=k)
     
     def newModel(self):

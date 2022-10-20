@@ -11,6 +11,9 @@ from sklearn import metrics
 from sklearn.mixture import GaussianMixture
 import pandas as pd
 from Models import ModelKNN, ModelLR, ModelMoG
+from sklearn.model_selection import GridSearchCV
+from sklearn.neighbors import KNeighborsClassifier
+
 
 # File locations
 dataFileName = './Data/Genes/data.csv'
@@ -186,17 +189,32 @@ if __name__=="__main__":
     pipeline.preProcess()
     estimatedComponents = pipeline.pcaSearch()
 
-    modelKnn = ModelKNN(k=10,seed=8)
+    
     modelLR = ModelLR()
     modelMoG = ModelMoG()
 
+    trainingFeatures = pipeline.featureExtraction(estimatedComponents)
+    #pipeline.validation(modelMoG,trainingFeatures, pipeline.trainY)
+    #pipeline.validation(modelLR,trainingFeatures, pipeline.trainY)
+
+    
     # TODO: search with a range around the estimated components
-    for pcaComponents in range(estimatedComponents-10, estimatedComponents+10, 2):
-        print("Search for PCA component "+ str(pcaComponents))
-        trainingFeatures = pipeline.featureExtraction(pcaComponents)
-        pipeline.validation(modelMoG,trainingFeatures, pipeline.trainY)
-        #pipeline.validation(modelLR,trainingFeatures, pipeline.trainY)
-        #pipeline.validation(modelKnn,trainingFeatures, pipeline.trainY) 
+    # for pcaComponents in range(estimatedComponents-10, estimatedComponents+10, 2):
+    #     print("Search for PCA component "+ str(pcaComponents))
+    knn_model = KNeighborsClassifier()
+    parameters = {'n_neighbors':[1,3,5,7,9,11,13,15],'p':[1,2],'weights':('uniform', 'distance')}
+
+    search = GridSearchCV(knn_model, parameters)
+    search.fit(trainingFeatures, pipeline.trainY)
+    print(search.cv_results_)
+    parameters = {}
+    #for parameterSet in parameters# range(1,15,2): # are 8 steps. P=1 and P=2, 16 combinations, weighting = 32
+        # k=1-15, stepsize of 2.
+        # 5 classes. So a multiple of 5 is not allowed.
+        # modelKnn = ModelKNN(parameters)
+        # pipeline.validation(modelKnn,trainingFeatures, pipeline.trainY) 
+
+        
 
     # TODO: finally, evaluate all models on the test data
     reducedTestData = pipeline.pca.transform(pipeline.testX)
