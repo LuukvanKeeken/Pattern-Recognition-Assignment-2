@@ -13,6 +13,8 @@ import pandas as pd
 from Models import ModelKNN, ModelLR, ModelMoG
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import LeaveOneOut
+import itertools
 
 
 # File locations
@@ -188,8 +190,7 @@ if __name__=="__main__":
     pipeline.splitData()
     pipeline.preProcess()
     estimatedComponents = pipeline.pcaSearch()
-
-    
+ 
     modelLR = ModelLR()
     modelMoG = ModelMoG()
 
@@ -197,14 +198,26 @@ if __name__=="__main__":
     #pipeline.validation(modelMoG,trainingFeatures, pipeline.trainY)
     #pipeline.validation(modelLR,trainingFeatures, pipeline.trainY)
 
+    # for parameterSet in range(32):# range(1,15,2): # are 8 steps. P=1 and P=2, 16 combinations, weighting = 32
+    #     modelKnn = ModelKNN(k=7)
+    #     pipeline.validation(modelKnn,trainingFeatures, pipeline.trainY) 
+
     
     # TODO: search with a range around the estimated components
     # for pcaComponents in range(estimatedComponents-10, estimatedComponents+10, 2):
     #     print("Search for PCA component "+ str(pcaComponents))
     knn_model = KNeighborsClassifier()
-    parameters = {'n_neighbors':[1,3,5,7,9,11,13,15],'p':[1,2],'weights':('uniform', 'distance')}
+    parameters = {'n_neighbors':[1,3,5,7,9,11,13,15],'p':[1,2],'weights':['uniform', 'distance']}
+    
+    # keys, values = zip(*parameters.items())
+    # parameterCombinations = [dict(zip(keys, v)) for v in itertools.product(*values)]
 
-    search = GridSearchCV(knn_model, parameters)
+    # for set in parameterCombinations:
+    #     modelKnn = ModelKNN(set)
+        
+    
+    validation = LeaveOneOut()
+    search = GridSearchCV(knn_model, parameters, cv=validation, scoring='f1_micro')
     search.fit(trainingFeatures, pipeline.trainY)
     print(search.cv_results_)
     parameters = {}
