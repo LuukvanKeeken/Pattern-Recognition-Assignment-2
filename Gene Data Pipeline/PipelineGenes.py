@@ -99,7 +99,7 @@ class Pipeline:
         self.trainX = np.delete(centeredTrainingData,zeroColumns,axis=1)/nonZeroSD
 
         # TODO: check if the way the mean is subtracted, and the standard deviation is correct
-        testMean = trainingMean #np.mean((np.sum(self.rawTestX)+numberOfTrainingSamples*trainingMean))
+        testMean = trainingMean
         centeredTestingData = self.rawTestX - testMean
         self.testX = np.delete(centeredTestingData,zeroColumns,axis=1)/nonZeroSD
 
@@ -160,6 +160,8 @@ class Pipeline:
     
     def validation(self, model, data, labels):
         # TODO: for training cost sensitive error function becuase number of samples per class
+        model.newModel()
+        
         accuracies = []
         for fold in range(len(labels)):
             if fold % 100 == 0:
@@ -187,13 +189,14 @@ if __name__=="__main__":
     modelKnn = ModelKNN(k=10,seed=8)
     modelLR = ModelLR()
     modelMoG = ModelMoG()
+
     # TODO: search with a range around the estimated components
     for pcaComponents in range(estimatedComponents-10, estimatedComponents+10, 2):
         print("Search for PCA component "+ str(pcaComponents))
         trainingFeatures = pipeline.featureExtraction(pcaComponents)
-        #pipeline.validation(modelMoG,trainingFeatures, pipeline.trainY)
+        pipeline.validation(modelMoG,trainingFeatures, pipeline.trainY)
         #pipeline.validation(modelLR,trainingFeatures, pipeline.trainY)
-        pipeline.validation(modelKnn,trainingFeatures, pipeline.trainY) 
+        #pipeline.validation(modelKnn,trainingFeatures, pipeline.trainY) 
 
     # TODO: finally, evaluate all models on the test data
     reducedTestData = pipeline.pca.transform(pipeline.testX)
