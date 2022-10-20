@@ -23,10 +23,7 @@ class ModelLR:
         return accuracy
 
 class ModelKNN:
-    def __init__(self, parameterSet):
-        k = parameterSet['k']
-        p = parameterSet['p']
-        k = parameterSet['k']
+    def __init__(self, k):
         self.knn_model = KNeighborsClassifier(n_neighbors=k)
     
     def newModel(self):
