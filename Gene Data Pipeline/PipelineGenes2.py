@@ -190,27 +190,28 @@ if __name__=="__main__":
     pipeline.preProcess()
     estimatedComponents = pipeline.pcaSearch()
 
+    estimatedComponents = 8
     trainingFeatures = pipeline.featureExtraction(estimatedComponents)
     input_data = trainingFeatures
     targets = pipeline.trainY
 
     cv_obj = LeaveOneOut()
 
-    knn_model = KNeighborsClassifier()
-    knn_parameters = {'n_neighbors':[1,3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
-    knn_search = GridSearchCV(knn_model, knn_parameters, cv = cv_obj, verbose=2)
-    knn_search.fit(input_data, targets)
-    
+    if False:
+        knn_model = KNeighborsClassifier()
+        knn_parameters = {'n_neighbors':[1,3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
+        knn_search = GridSearchCV(knn_model, knn_parameters, cv = cv_obj, verbose=2)
+        knn_search.fit(input_data, targets)
+        print(f"With a validation accuracy of {knn_search.best_score_}%, the best combination of hyperparameter settings for KNN is:")
+        print(knn_search.best_params_)
 
-    lr_model = LogisticRegression()
-    lr_parameters = {'penalty':('l2', 'l1', 'elasticnet', 'none')}
-    lr_search = GridSearchCV(lr_model, lr_parameters, cv = cv_obj, verbose=1)
-    lr_search.fit(input_data, targets)
-
-    print(f"With a validation accuracy of {knn_search.best_score_}%, the best combination of hyperparameter settings for KNN is:")
-    print(knn_search.best_params_)
-    print(f"With a validation accuracy of {lr_search.best_score_}%, the best combination of hyperparameter settings for Logistic Regression is:")
-    print(lr_search.best_params_)
+    if True:
+        lr_model = LogisticRegression(max_iter=10000, class_weight='balanced')  
+        lr_parameters = {'penalty':('l2', 'l1', 'elasticnet', 'none')}#, 'max_iter':[10000], 'class_weight':('balanced')}
+        lr_search = GridSearchCV(lr_model, lr_parameters, cv = cv_obj, verbose=2)
+        lr_search.fit(input_data, targets)
+        print(f"With a validation accuracy of {lr_search.best_score_}%, the best combination of hyperparameter settings for Logistic Regression is:")
+        print(lr_search.best_params_)
 
     # TODO: finally, evaluate all models on the test data
     reducedTestData = pipeline.pca.transform(pipeline.testX)
