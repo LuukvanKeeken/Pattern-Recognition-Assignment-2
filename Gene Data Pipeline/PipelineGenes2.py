@@ -191,7 +191,7 @@ if __name__=="__main__":
     estimatedComponents = pipeline.pcaSearch()
 
     trainingFeatures = pipeline.featureExtraction(estimatedComponents)
-    input_data = trainingFeatures
+    input_data = pipeline.trainX
     targets = pipeline.trainY
 
     cv_obj = LeaveOneOut()
