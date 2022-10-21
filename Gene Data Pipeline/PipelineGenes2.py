@@ -1,4 +1,5 @@
 import os
+import pickle
 from pyexpat import model
 from random import sample
 import numpy as np
@@ -14,6 +15,7 @@ from Models import ModelKNN, ModelLR, ModelMoG
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
+from matplotlib.ticker import MaxNLocator
 
 
 # File locations
@@ -24,6 +26,8 @@ labelsFileName = '../Data/Genes/labels.csv'
 rawDataFile = './PreProcessedData/rawData.npy'
 labelsFile = './PreProcessedData/labels.npy'
 labelsNameFile = './PreProcessedData/labelNames.npy'
+roughGridSearchFile = './PreProcessedData/roughGrid.npy'
+fineGridSearchFile = './PreProcessedData/fineGrid.npy'
 
 LoadDataset = False
 
@@ -139,26 +143,26 @@ class Pipeline:
         self.pca = PCA(numberOfComponents)
         reducedDimensionsData = self.pca.fit_transform(self.trainX)
   
-        if (numberOfComponents <= 3):
-            fig = plt.figure(figsize = (8,8))
-            if numberOfComponents == 3:
-                ax = fig.add_subplot(projection='3d')
-            else:
-                ax = fig.add_subplot()
+        # if (numberOfComponents <= 3):
+        #     fig = plt.figure(figsize = (8,8))
+        #     if numberOfComponents == 3:
+        #         ax = fig.add_subplot(projection='3d')
+        #     else:
+        #         ax = fig.add_subplot()
                 
-            for index, label in enumerate(self.labelNames):
-                indicesOfClass = self.labels == index
-                points = reducedDimensionsData[indicesOfClass] 
+        #     for index, label in enumerate(self.labelNames):
+        #         indicesOfClass = self.labels == index
+        #         points = reducedDimensionsData[indicesOfClass] 
                 
-                if numberOfComponents == 1:
-                    ax.hist(points, alpha=0.5)
-                elif numberOfComponents == 2:
-                    ax.scatter(points[0],points[1])
-                else:
-                    ax.scatter(points[0],points[1],points[2])
-            plt.xlabel("Principal component 1")
-            plt.ylabel("Principal component 2")
-            plt.title("PCA")
+        #         if numberOfComponents == 1:
+        #             ax.hist(points, alpha=0.5)
+        #         elif numberOfComponents == 2:
+        #             ax.scatter(points[0],points[1])
+        #         else:
+        #             ax.scatter(points[0],points[1],points[2])
+        #     plt.xlabel("Principal component 1")
+        #     plt.ylabel("Principal component 2")
+        #     plt.title("PCA")
             # plt.savefig(f"Figures{os.sep}PCA")
         return reducedDimensionsData
     
@@ -183,35 +187,99 @@ class Pipeline:
         print("Done, average accuracy is: " + str(round(accuracy,3))+"%")
         return accuracy
 
+    def gridSearch(self, componentsList):
+        results = []
+        for components in componentsList:
+            result = [components]
+            
+            # Set up validation data
+            input_data = pipeline.featureExtraction(components)
+            targets = pipeline.trainY
+
+            # Knn
+            print("Starting grid search with "+str(components)+" PCA components for knn.")
+            knn_model = KNeighborsClassifier()
+            knn_parameters = {'n_neighbors':[1, 3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
+            knn_search = GridSearchCV(knn_model, knn_parameters, cv = LeaveOneOut(), verbose=1)            
+            #knn_parameters = {}
+            # knn_search = GridSearchCV(knn_model, knn_parameters, verbose=2)
+            knn_search.fit(input_data, targets)
+            #print(f"With a validation accuracy of {knn_search.best_score_}%, the best combination of hyperparameter settings for KNN is:")
+            result.append(knn_search.best_score_)
+            result.append(knn_search.best_params_)
+            
+            # # Logistic regression
+            print("Starting grid search with "+str(components)+" PCA components for lr.")
+            lr_model = LogisticRegression(max_iter=10000, class_weight='balanced')  
+            lr_parameters = {'penalty':('l2', 'none')}
+            lr_search = GridSearchCV(lr_model, lr_parameters, cv = LeaveOneOut(), verbose=1)
+            # lr_parameters = {}
+            # lr_search = GridSearchCV(lr_model, lr_parameters, verbose=2)
+            lr_search.fit(input_data, targets)
+            #print(f"With a validation accuracy of {lr_search.best_score_}%, the best combination of hyperparameter settings for Logistic Regression is:")
+            result.append(lr_search.best_score_)
+            result.append(lr_search.best_params_)
+            
+            # Collect results
+            results.append(result.copy())
+        return results
+
+
 if __name__=="__main__":
     pipeline = Pipeline()
     pipeline.exploreData()
     pipeline.splitData()
     pipeline.preProcess()
     estimatedComponents = pipeline.pcaSearch()
+    
+    print(estimatedComponents)
+    # roughRange = [*range(10, estimatedComponents+1, 10)]
+    # roughtPcaResults = pipeline.gridSearch(roughRange)
+    # #with open(roughGridSearchFile, 'wb') as fp:
+    # #    pickle.dump(roughtPcaResults, fp)
 
-    estimatedComponents = 8
-    trainingFeatures = pipeline.featureExtraction(estimatedComponents)
-    input_data = trainingFeatures
-    targets = pipeline.trainY
+    # fineRange = [*range(10, 41, 1)]
+    # newPoints = []
+    # for parameter in fineRange:
+    #     if (parameter in(roughRange))==False:
+    #         newPoints.append(parameter)
 
-    cv_obj = LeaveOneOut()
+    # fineSearchResults = pipeline.gridSearch(newPoints)
+    # # with open(fineGridSearchFile, 'wb') as fp:
+    # #     pickle.dump(fineSearchResults, fp)
 
-    if False:
-        knn_model = KNeighborsClassifier()
-        knn_parameters = {'n_neighbors':[1,3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
-        knn_search = GridSearchCV(knn_model, knn_parameters, cv = cv_obj, verbose=2)
-        knn_search.fit(input_data, targets)
-        print(f"With a validation accuracy of {knn_search.best_score_}%, the best combination of hyperparameter settings for KNN is:")
-        print(knn_search.best_params_)
+    bestPca = 40
+    # Load and sort the results file
+    with open (roughGridSearchFile, 'rb') as fp:
+        roughSearch = pickle.load(fp)
+    resultRough = np.array(roughSearch)
+    with open (fineGridSearchFile, 'rb') as fp:
+        fineSearch = pickle.load(fp)
+    resultsFine = np.array(fineSearch)
+    results = roughSearch
+    results.extend(fineSearch)
+    results = np.array(results)
+    results=results[results[:,0].argsort()]
 
-    if True:
-        lr_model = LogisticRegression(max_iter=10000, class_weight='balanced')  
-        lr_parameters = {'penalty':('l2', 'l1', 'elasticnet', 'none')}#, 'max_iter':[10000], 'class_weight':('balanced')}
-        lr_search = GridSearchCV(lr_model, lr_parameters, cv = cv_obj, verbose=2)
-        lr_search.fit(input_data, targets)
-        print(f"With a validation accuracy of {lr_search.best_score_}%, the best combination of hyperparameter settings for Logistic Regression is:")
-        print(lr_search.best_params_)
+    bestSettings = results[results[:,0]==bestPca][0]
+    bestKnnSettings = bestSettings[2]
+    bestLrSettings = bestSettings[4]
 
-    # TODO: finally, evaluate all models on the test data
-    reducedTestData = pipeline.pca.transform(pipeline.testX)
+    # Evaluate all models on the test data
+    trainX = pipeline.featureExtraction(bestPca)
+    testX = pipeline.pca.transform(pipeline.testX)
+    
+    #knn_model = KNeighborsClassifier(n_neighbors=6, p=1, weights="uniform")
+    knn_model = KNeighborsClassifier(bestKnnSettings['n_neighbors'],bestKnnSettings['weights'],p=bestKnnSettings['p'])
+    knn_model.fit(trainX, pipeline.trainY)
+    knnPredictions = knn_model.predict(testX)
+    knnCorrect = np.sum(knnPredictions == pipeline.testY)
+    knnAccuracy = knnCorrect/len(pipeline.testX)
+    print(knnAccuracy)
+
+    lr_model = LogisticRegression(penalty='l2', max_iter=10000, class_weight='balanced')  
+    lr_model.fit(trainX, pipeline.trainY)
+    lrPredictions = lr_model.predict(testX)
+    lrCorrect = np.sum(knnPredictions == pipeline.testY)
+    lrAccuracy = lrCorrect/len(pipeline.testX)
+    print(lrAccuracy)
