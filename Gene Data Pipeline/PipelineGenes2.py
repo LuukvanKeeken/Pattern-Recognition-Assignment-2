@@ -1,33 +1,25 @@
-import os
 import pickle
-from pyexpat import model
-from random import sample
 import numpy as np
 from numpy import genfromtxt
 from os import path
 from sklearn.decomposition import PCA
-import matplotlib.pyplot as plt
 from sklearn.linear_model import LogisticRegression
-from sklearn import metrics
-from sklearn.mixture import GaussianMixture
-import pandas as pd
-from Models import ModelKNN, ModelLR, ModelMoG
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
-from matplotlib.ticker import MaxNLocator
-
 
 # File locations
-dataFileName = '../Data/Genes/data.csv'
-labelsFileName = '../Data/Genes/labels.csv'
+dataFileName = './Data/Genes/data.csv'
+labelsFileName = './Data/Genes/labels.csv'
 
 # Storage of data to speed up debugging
-rawDataFile = './PreProcessedData/rawData.npy'
-labelsFile = './PreProcessedData/labels.npy'
-labelsNameFile = './PreProcessedData/labelNames.npy'
-roughGridSearchFile = './PreProcessedData/roughGrid.npy'
-fineGridSearchFile = './PreProcessedData/fineGrid.npy'
+rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
+labelsFile = './Gene Data Pipeline/Data/labels.npy'
+labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
+GridSearchClassifiersFile = './Gene Data Pipeline/Data/ClassifiersGridSearch.npy'
+#roughGridSearchFile = './Gene Data Pipeline/Data/roughGrid.npy'
+#fineGridSearchFile = './Gene Data Pipeline/Data/fineGrid.npy'
+#finerGridSearchFile= './Gene Data Pipeline/Data/finerGrid.npy'
 
 LoadDataset = False
 
@@ -60,31 +52,6 @@ class Pipeline:
             self.rawData = np.load(rawDataFile)
             self.labels = np.load(labelsFile)
             self.labelNames = np.load(labelsNameFile, allow_pickle=True)
-
-    def exploreData(self):
-        # Exploration of the data
-
-        # count number of samples per class
-        samplesPerClass = [0]*len(self.labelNames)
-        for label in self.labels:
-            samplesPerClass[label] +=1
-        leastItems = np.min(samplesPerClass)
-
-        self.classWeights={}
-        for index, i in enumerate(samplesPerClass):
-            weight = leastItems/i
-            self.classWeights[index]=weight
-        
-        print("The data set has "+ str(len(self.labels))+ " samples divided over " + str(len(self.labelNames)) + " classes.")
-        print("For labels " + str(self.labelNames) + ",the number of samples per class are: " + str(samplesPerClass))
-        print("Number of features per sample: "+ str(self.rawData.shape[1]))
-        
-        zeroColumns = 0
-        for column in self.rawData.T:
-            if len(column) == np.count_nonzero(column==0.0):
-                zeroColumns +=1
-        print("However, of those features, "+ str(zeroColumns)+ " features are zero for each sample")
-        print()
 
     def splitData(self):
         testSetFactor = 0.1
@@ -124,46 +91,11 @@ class Pipeline:
                     optimalComponent = i+1
                     print(f"{optimalComponent} components leads to {cum_exp_var[i]} explained variance.")
                     break
-
-        plt.bar(range(1, n_comps+1), exp_var, align='center',
-                label='Individual explained variance')
-
-        plt.step(range(1, n_comps+1), cum_exp_var, where='mid',
-                label='Cumulative explained variance', color='red')
-
-        plt.ylabel('Explained variance percentage')
-        plt.xlabel('Principal component index')
-        plt.xticks(ticks=np.arange(1,n_comps+1, 2))
-        plt.legend(loc='best')
-        plt.tight_layout()
-        # plt.savefig("./Figures/Barplot.png")
         return optimalComponent
       
     def featureExtraction(self, numberOfComponents):
         self.pca = PCA(numberOfComponents)
         reducedDimensionsData = self.pca.fit_transform(self.trainX)
-  
-        # if (numberOfComponents <= 3):
-        #     fig = plt.figure(figsize = (8,8))
-        #     if numberOfComponents == 3:
-        #         ax = fig.add_subplot(projection='3d')
-        #     else:
-        #         ax = fig.add_subplot()
-                
-        #     for index, label in enumerate(self.labelNames):
-        #         indicesOfClass = self.labels == index
-        #         points = reducedDimensionsData[indicesOfClass] 
-                
-        #         if numberOfComponents == 1:
-        #             ax.hist(points, alpha=0.5)
-        #         elif numberOfComponents == 2:
-        #             ax.scatter(points[0],points[1])
-        #         else:
-        #             ax.scatter(points[0],points[1],points[2])
-        #     plt.xlabel("Principal component 1")
-        #     plt.ylabel("Principal component 2")
-        #     plt.title("PCA")
-            # plt.savefig(f"Figures{os.sep}PCA")
         return reducedDimensionsData
     
     def validation(self, model, data, labels):
@@ -224,62 +156,79 @@ class Pipeline:
             results.append(result.copy())
         return results
 
+    def evaluate(self, model, pcaComponents):
+        # Evaluate the model on the test data
+        trainX = pipeline.featureExtraction(pcaComponents)
+        testX = pipeline.pca.transform(pipeline.testX)
+        
+        model.fit(trainX, pipeline.trainY)
+        predictions = model.predict(testX)
+        result = np.vstack((pipeline.testY, predictions)).T
+        return result
+
 
 if __name__=="__main__":
     pipeline = Pipeline()
-    pipeline.exploreData()
     pipeline.splitData()
     pipeline.preProcess()
-    estimatedComponents = pipeline.pcaSearch()
+    estimatedComponents = pipeline.pcaSearch() 
     
-    print(estimatedComponents)
-    # roughRange = [*range(10, estimatedComponents+1, 10)]
-    # roughtPcaResults = pipeline.gridSearch(roughRange)
-    # #with open(roughGridSearchFile, 'wb') as fp:
-    # #    pickle.dump(roughtPcaResults, fp)
+    # Specify the array for which pca components the grid search must be conducted
+    pcaComponentSearch = [*range(1, 40, 1)]
+    pcaComponentSearch.extend([*range(40, estimatedComponents+1, 10)])
 
-    # fineRange = [*range(10, 41, 1)]
-    # newPoints = []
-    # for parameter in fineRange:
-    #     if (parameter in(roughRange))==False:
-    #         newPoints.append(parameter)
+    # If a grid search already is performed, load the file to only search new components
+    if path.exists(GridSearchClassifiersFile):
+        with open (GridSearchClassifiersFile, 'rb') as fp:
+            gridSearchResults = np.array(pickle.load(fp))
+            # check which parameters already exist and append new parameters
+        searchRange = []
+        for parameter in pcaComponentSearch:
+            if (parameter in(gridSearchResults[:,0]))==False:
+                searchRange.append(parameter)
+    else:
+        gridSearchResults=np.array([])
+        searchRange = pcaComponentSearch
 
-    # fineSearchResults = pipeline.gridSearch(newPoints)
-    # # with open(fineGridSearchFile, 'wb') as fp:
-    # #     pickle.dump(fineSearchResults, fp)
+    # with open (roughGridSearchFile, 'rb') as fp:
+    #         tempResults = pickle.load(fp)
+    # newResults = tempResults
+    
+    if len(searchRange)>0:
+        newResults = pipeline.gridSearch(searchRange)
+        if len(gridSearchResults) == 0:
+            gridSearchResults = newResults
+        else:
+            gridSearchResults = np.append(gridSearchResults,newResults, axis=0)
+        
+        with open(GridSearchClassifiersFile, 'wb') as fp:
+            pickle.dump(gridSearchResults, fp)
 
-    bestPca = 40
-    # Load and sort the results file
-    with open (roughGridSearchFile, 'rb') as fp:
-        roughSearch = pickle.load(fp)
-    resultRough = np.array(roughSearch)
-    with open (fineGridSearchFile, 'rb') as fp:
-        fineSearch = pickle.load(fp)
-    resultsFine = np.array(fineSearch)
-    results = roughSearch
-    results.extend(fineSearch)
-    results = np.array(results)
-    results=results[results[:,0].argsort()]
+    bestKnnPca = 8
+    bestLrPca = 12
 
-    bestSettings = results[results[:,0]==bestPca][0]
-    bestKnnSettings = bestSettings[2]
-    bestLrSettings = bestSettings[4]
+    # Open de search results to load the optimal model parameters
+    with open (GridSearchClassifiersFile, 'rb') as fp:
+        searchResults = np.array(pickle.load(fp))
 
     # Evaluate all models on the test data
-    trainX = pipeline.featureExtraction(bestPca)
-    testX = pipeline.pca.transform(pipeline.testX)
-    
-    #knn_model = KNeighborsClassifier(n_neighbors=6, p=1, weights="uniform")
-    knn_model = KNeighborsClassifier(bestKnnSettings['n_neighbors'],bestKnnSettings['weights'],p=bestKnnSettings['p'])
-    knn_model.fit(trainX, pipeline.trainY)
-    knnPredictions = knn_model.predict(testX)
-    knnCorrect = np.sum(knnPredictions == pipeline.testY)
-    knnAccuracy = knnCorrect/len(pipeline.testX)
-    print(knnAccuracy)
+    print("The class label names are "+str(pipeline.labelNames))
+    bestKnnSettings = searchResults[searchResults[:,0]==bestKnnPca][0][2]
+    knn_model = KNeighborsClassifier(n_neighbors = bestKnnSettings['n_neighbors'], weights = bestKnnSettings['weights'], p=bestKnnSettings['p'])
+    knnPredictions = pipeline.evaluate(knn_model, bestKnnPca)
+    knnCorrectPredicted = knnPredictions[:,0] == knnPredictions[:,1]
+    knnDifferentIndices = np.where(knnCorrectPredicted==False)
+    knnAccuracy = np.sum(knnCorrectPredicted)/len(knnPredictions)
+    print("KNN classifier test results:")
+    print("  The test accuracy is: " + str(knnAccuracy))
+    print("  Indices " + str(knnDifferentIndices)+ " of the test are [labeled, prediced] as: " + str(knnPredictions[knnDifferentIndices]))
 
-    lr_model = LogisticRegression(penalty='l2', max_iter=10000, class_weight='balanced')  
-    lr_model.fit(trainX, pipeline.trainY)
-    lrPredictions = lr_model.predict(testX)
-    lrCorrect = np.sum(knnPredictions == pipeline.testY)
-    lrAccuracy = lrCorrect/len(pipeline.testX)
-    print(lrAccuracy)
+    bestLrSettings = searchResults[searchResults[:,0]==bestLrPca][0][4]
+    lr_model = LogisticRegression(penalty=bestLrSettings['penalty'], max_iter=10000, class_weight='balanced')  
+    lrPredictions = pipeline.evaluate(lr_model, bestLrPca)
+    lrCorrectPredicted = lrPredictions[:,0] == lrPredictions[:,1]
+    lrDifferentIndices = np.where(lrCorrectPredicted==False)
+    lrAccuracy = np.sum(lrCorrectPredicted)/len(lrPredictions)
+    print("LR classifier test results:")
+    print("  The test accuracy is: " + str(lrAccuracy))
+    print("  Indices " + str(lrDifferentIndices)+ " of the test are [labeled, prediced] as: " + str(lrPredictions[lrDifferentIndices]))
