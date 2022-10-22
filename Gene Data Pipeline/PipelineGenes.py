@@ -220,6 +220,7 @@ if __name__=="__main__":
     knnDifferentIndices = np.where(knnCorrectPredicted==False)
     knnAccuracy = np.sum(knnCorrectPredicted)/len(knnPredictions)
     print("KNN classifier test results:")
+    print("  The best model settings for " +str(bestKnnPca)+" PCA components are " + str(bestKnnSettings))
     print("  The test accuracy is: " + str(knnAccuracy))
     print("  Indices " + str(knnDifferentIndices)+ " of the test are [labeled, prediced] as: " + str(knnPredictions[knnDifferentIndices]))
 
@@ -230,5 +231,6 @@ if __name__=="__main__":
     lrDifferentIndices = np.where(lrCorrectPredicted==False)
     lrAccuracy = np.sum(lrCorrectPredicted)/len(lrPredictions)
     print("LR classifier test results:")
+    print("  The best model settings for " +str(bestLrPca)+" PCA components are " + str(bestLrSettings))
     print("  The test accuracy is: " + str(lrAccuracy))
     print("  Indices " + str(lrDifferentIndices)+ " of the test are [labeled, prediced] as: " + str(lrPredictions[lrDifferentIndices]))
