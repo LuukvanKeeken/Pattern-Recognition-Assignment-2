@@ -1,26 +1,11 @@
 import os
 import pickle
-from pyexpat import model
-from random import sample
 import numpy as np
-from numpy import genfromtxt
-from os import path
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
-from sklearn import metrics
-from sklearn.mixture import GaussianMixture
-import pandas as pd
-from Models import ModelKNN, ModelLR, ModelMoG
-from sklearn.model_selection import GridSearchCV
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import LeaveOneOut
 from matplotlib.ticker import MaxNLocator
 
-
 def dataSetSummary():
-    # Exploration of the data
-
     # count number of samples per class
     samplesPerClass = [0]*len(labelNames)
     for label in labels:
@@ -69,7 +54,7 @@ def PcaAnalysis():
     host.legend(handles=lns, loc='upper left')
 
     fig.tight_layout()
-    plt.savefig("./Figures/PcaVariance.png")
+    plt.savefig("./Figures/GenesPcaVariance.png")
 
 def featureExtraction(numberOfComponents):
     # TODO: als we dit in het report gebruiken dan iedere data point de kleur van de class geven.
@@ -96,33 +81,54 @@ def featureExtraction(numberOfComponents):
         plt.xlabel("Principal component 1")
         plt.ylabel("Principal component 2")
         plt.title("PCA")
-        plt.savefig(f"Figures{os.sep}PCA")
+        plt.savefig(f"Figures{os.sep}GenesVisualization")
 
-def plotGridAccuracy(performances, experimentName):
+def plotGridAccuracy(performances):
     fig = plt.figure(figsize = (8,8))
     xAxis = performances[:,0].astype('float64')
     performanceKnn = performances[:,1].astype('float64')
     performanceLr = performances[:,3].astype('float64')
-    plt.plot(xAxis, performanceKnn, label="KNN")
-    plt.plot(xAxis, performanceLr, label="LR")
+
+    fig, ax = plt.subplots(figsize=(5,4))
+    ax.plot(xAxis, performanceKnn, label="KNN")
+    ax.plot(xAxis, performanceLr, label="LR")
+
+    # inset axes....
+    axins = ax.inset_axes([0.25, 0.3, 0.72, 0.47])
+    axins.plot(xAxis, performanceKnn, label="KNN")
+    axins.plot(xAxis, performanceLr, label="LR")
+
+    # sub region of the original image
+    x1, x2, y1, y2 = 2, 13, 0.85, 1.005
+    axins.set_xlim(x1, x2)
+    axins.xaxis.set_major_locator(MaxNLocator(integer=True))
+    axins.set_ylim(y1, y2)
+    #axins.set_xticklabels([])
+    #axins.set_yticklabels([])
+
+    ax.indicate_inset_zoom(axins, edgecolor="black")
+
+    # plt.plot(xAxis, performanceKnn, label="KNN")
+    # plt.plot(xAxis, performanceLr, label="LR")
+    # ax = fig.gca()
+    # ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    # plt.xticks(xAxis)
     plt.xlabel("PCA dimensions")
     plt.ylabel("Accuracy")
+    # plt.ylim((0.85,1.05))
+    plt.xlim((1,170))
     plt.legend()
-    ax = fig.gca()
-    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    plt.xticks(xAxis)
     plt.title("Best model accuracies with PCA components")
-    figureName =f"Figures{os.sep}"+experimentName 
+    figureName =f"Figures{os.sep}GenesClassifiersGridSearch" 
     plt.savefig(figureName)
 
 
 if __name__=="__main__":
     # File locations
-    rawDataFile = './PreProcessedData/rawData.npy'
-    labelsFile = './PreProcessedData/labels.npy'
-    labelsNameFile = './PreProcessedData/labelNames.npy'
-    roughGridSearchFile = './PreProcessedData/roughGrid.npy'
-    fineGridSearchFile = './PreProcessedData/fineGrid.npy'
+    rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
+    labelsFile = './Gene Data Pipeline/Data/labels.npy'
+    labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
+    GridSearchClassifiersFile = './Gene Data Pipeline/Data/ClassifiersGridSearch.npy'
 
     # Load data
     rawData = np.load(rawDataFile)
@@ -139,20 +145,8 @@ if __name__=="__main__":
     dataSetSummary()
     PcaAnalysis()
     featureExtraction(2)
-   
-    # Plot the results of the grid search
-    with open (roughGridSearchFile, 'rb') as fp:
-        roughSearch = pickle.load(fp)
-    resultRough = np.array(roughSearch)
-    with open (fineGridSearchFile, 'rb') as fp:
-        fineSearch = pickle.load(fp)
-    resultsFine = np.array(fineSearch)
 
-    results = roughSearch
-    results.extend(fineSearch)
-    results = np.array(results)
+    with open (GridSearchClassifiersFile, 'rb') as fp:
+        results = np.array(pickle.load(fp))   
     results=results[results[:,0].argsort()]
-
-    plotGridAccuracy(resultRough, "RoughGridSearch")
-    plotGridAccuracy(resultsFine, "FineGridSearch")
-    plotGridAccuracy(results, "CombinedGridSearch")
+    plotGridAccuracy(results)
