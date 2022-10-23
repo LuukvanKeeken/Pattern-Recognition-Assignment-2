@@ -1,17 +1,16 @@
 from sklearn.model_selection import train_test_split
 from DataHandler import DataHandler
-from Model import Model
+from Models import SVM
+import os
 
 
-# Initial settings
+def main():
+    
+    # Initial settings
 
-data_dir = "BigCats/"
-IMG_WIDTH = 200
-IMG_HEIGHT = 200
-
-
-if __name__=="__main__":
-
+    data_dir = f"BigCats{os.sep}"
+    IMG_WIDTH = 200
+    IMG_HEIGHT = 200
     dh = DataHandler()
     dh.loadData(data_dir, IMG_WIDTH, IMG_HEIGHT)
 
@@ -29,6 +28,11 @@ if __name__=="__main__":
     )
 
     # Training and Testing the Model
-    model = Model()
+    model = SVM()
     model.train(X_train, y_train)
     model.test(X_test, y_test)
+
+
+
+if __name__=="__main__":
+    main()
