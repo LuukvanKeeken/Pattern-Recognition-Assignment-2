@@ -7,6 +7,9 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.model_selection import LeaveOneOut
+import time
+from sklearn.naive_bayes import GaussianNB
+from imblearn.over_sampling import SMOTE
 
 # File locations
 dataFileName = './Data/Genes/data.csv'
@@ -17,9 +20,6 @@ rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
 labelsFile = './Gene Data Pipeline/Data/labels.npy'
 labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
 GridSearchClassifiersFile = './Gene Data Pipeline/Data/ClassifiersGridSearch.npy'
-#roughGridSearchFile = './Gene Data Pipeline/Data/roughGrid.npy'
-#fineGridSearchFile = './Gene Data Pipeline/Data/fineGrid.npy'
-#finerGridSearchFile= './Gene Data Pipeline/Data/finerGrid.npy'
 
 LoadDataset = False
 
@@ -73,10 +73,24 @@ class Pipeline:
         nonZeroSD = np.delete(trainingSD,zeroColumns,axis=0)
         self.trainX = np.delete(centeredTrainingData,zeroColumns,axis=1)/nonZeroSD
 
-        # TODO: check if the way the mean is subtracted, and the standard deviation is correct
-        testMean = trainingMean
-        centeredTestingData = self.rawTestX - testMean
+        # Apply same normalization on the test data
+        centeredTestingData = self.rawTestX - trainingMean
         self.testX = np.delete(centeredTestingData,zeroColumns,axis=1)/nonZeroSD
+
+        # Augment the training data
+        samplerPerClass = 273
+        oversample = SMOTE(sampling_strategy = {0:samplerPerClass, 1:samplerPerClass, 2:samplerPerClass, 3:samplerPerClass, 4:samplerPerClass})
+        augmentedTrainX, self.augmentedTrainY = oversample.fit_resample(self.rawTrainX, self.trainY)
+        augmentedMean = np.mean(augmentedTrainX, axis=0) 
+        augmentedCenteredData = augmentedTrainX - augmentedMean
+        augmentedSD = np.std(augmentedCenteredData, axis=0)
+        augmentedZeroColumns = augmentedSD == 0
+        augmentedNonZeroSD = np.delete(augmentedSD,augmentedZeroColumns,axis=0)
+        self.augmentedTrainX = np.delete(augmentedCenteredData,augmentedZeroColumns,axis=1)/augmentedNonZeroSD
+
+        # Apply same normalization on the test data
+        augmentedCenteredTestingData = self.rawTestX - augmentedMean
+        self.augmentedTestX = np.delete(augmentedCenteredTestingData,augmentedZeroColumns,axis=1)/augmentedNonZeroSD
 
     def pcaSearch(self):
         n_comps = len(self.trainX)
@@ -95,107 +109,83 @@ class Pipeline:
       
     def featureExtraction(self, numberOfComponents):
         self.pca = PCA(numberOfComponents)
+        self.pcaAugmented = PCA(numberOfComponents)
         reducedDimensionsData = self.pca.fit_transform(self.trainX)
-        return reducedDimensionsData
-    
-    def validation(self, model, data, labels):
-        # TODO: for training cost sensitive error function becuase number of samples per class
-        model.newModel()
+        AugmentedReducedDimensionsData = self.pcaAugmented.fit_transform(self.augmentedTrainX)
+        return reducedDimensionsData, AugmentedReducedDimensionsData
+
+# Grid search on training data. Both original and augmented 
+    def classifierGridSearch(self, pcaComponentSearch):
+        # If a grid search already is performed, load the file to only search new components
+        if path.exists(GridSearchClassifiersFile):
+            with open (GridSearchClassifiersFile, 'rb') as fp:
+                gridSearchResults = np.array(pickle.load(fp))
+                # check which parameters already exist and append new parameters
+            searchRange = []
+            for parameter in pcaComponentSearch:
+                if (parameter in(gridSearchResults[:,0]))==False:
+                    searchRange.append(parameter)
+        else:
+            gridSearchResults=np.array([])
+            searchRange = pcaComponentSearch
+        # with open (roughGridSearchFile, 'rb') as fp:
+        #         tempResults = pickle.load(fp)
+        # newResults = tempResults
         
-        accuracies = []
-        for fold in range(len(labels)):
-            if fold % 100 == 0:
-                print("Fold " + str(fold+1))
-            trainX = np.delete(data,fold,axis=0)
-            trainY = np.delete(labels,fold,axis=0)
-            valX = data[[fold]]
-            valY = labels[[fold]]
-            
-            # Train and validate the model
-            model.train(trainX, trainY, self.classWeights)
-            accuracies.append(model.test(valX, valY))
+        if len(searchRange)==0:
+            return
 
-        accuracy = np.mean(accuracies)
-        print("Done, average accuracy is: " + str(round(accuracy,3))+"%")
-        return accuracy
-
-    def gridSearch(self, componentsList):
         results = []
-        for components in componentsList:
+        run = 1
+        for components in searchRange:
+            print("Starting search " + str(run) + "/"+str(len(searchRange)))
+            run +=1
+            start_time = time.time()
             result = [components]
             
-            # Set up validation data
-            input_data = pipeline.featureExtraction(components)
-            targets = pipeline.trainY
+            if components == len(self.trainX[0]):
+                input_data=pipeline.trainX
+                targets = pipeline.trainY
+            else:
+                input_data,_ = pipeline.featureExtraction(components)
+                targets = pipeline.trainY
 
             # Knn
-            print("Starting grid search with "+str(components)+" PCA components for knn.")
+            print("Starting grid search with "+str(components)+" components for knn.")
             knn_model = KNeighborsClassifier()
             knn_parameters = {'n_neighbors':[1, 3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
-            knn_search = GridSearchCV(knn_model, knn_parameters, cv = LeaveOneOut(), verbose=1)            
-            #knn_parameters = {}
-            # knn_search = GridSearchCV(knn_model, knn_parameters, verbose=2)
+            knn_search = GridSearchCV(knn_model, knn_parameters, cv = LeaveOneOut(), verbose=2)            
             knn_search.fit(input_data, targets)
-            #print(f"With a validation accuracy of {knn_search.best_score_}%, the best combination of hyperparameter settings for KNN is:")
             result.append(knn_search.best_score_)
             result.append(knn_search.best_params_)
             
-            # # Logistic regression
-            print("Starting grid search with "+str(components)+" PCA components for lr.")
+            # Logistic regression
+            print("Starting grid search with "+str(components)+" components for lr.")
             lr_model = LogisticRegression(max_iter=10000, class_weight='balanced')  
             lr_parameters = {'penalty':('l2', 'none')}
-            lr_search = GridSearchCV(lr_model, lr_parameters, cv = LeaveOneOut(), verbose=1)
-            # lr_parameters = {}
-            # lr_search = GridSearchCV(lr_model, lr_parameters, verbose=2)
+            lr_search = GridSearchCV(lr_model, lr_parameters, cv = LeaveOneOut(), verbose=2)
             lr_search.fit(input_data, targets)
-            #print(f"With a validation accuracy of {lr_search.best_score_}%, the best combination of hyperparameter settings for Logistic Regression is:")
             result.append(lr_search.best_score_)
             result.append(lr_search.best_params_)
+
+            # Bayes
+            print("Starting grid search with "+str(components)+" components for Naive Bayes")
+            bayesModel = GaussianNB()
+            bayesParameters = {}
+            bayesSearch = GridSearchCV(bayesModel, bayesParameters, cv = LeaveOneOut(), verbose=2)
+            bayesSearch.fit(input_data, targets)
+            result.append(bayesSearch.best_score_)
+            result.append(bayesSearch.best_params_)
             
             # Collect results
-            results.append(result.copy())
-        return results
+            print("The search took %s seconds." % round((time.time() - start_time),2))
+            results.append(result)
 
-    def evaluate(self, model, pcaComponents):
-        # Evaluate the model on the test data
-        trainX = pipeline.featureExtraction(pcaComponents)
-        testX = pipeline.pca.transform(pipeline.testX)
-        
-        model.fit(trainX, pipeline.trainY)
-        predictions = model.predict(testX)
-        result = np.vstack((pipeline.testY, predictions)).T
-        return result
+        newResults = results#[result]
+        #newResults = self.gridSearchPca(searchRange)
+        # Grid search on the original data set
+        #result = self.gridSearchOriginal(self)
 
-
-if __name__=="__main__":
-    pipeline = Pipeline()
-    pipeline.splitData()
-    pipeline.preProcess()
-    estimatedComponents = pipeline.pcaSearch() 
-    
-    # Specify the array for which pca components the grid search must be conducted
-    pcaComponentSearch = [*range(1, 40, 1)]
-    pcaComponentSearch.extend([*range(40, estimatedComponents+1, 10)])
-
-    # If a grid search already is performed, load the file to only search new components
-    if path.exists(GridSearchClassifiersFile):
-        with open (GridSearchClassifiersFile, 'rb') as fp:
-            gridSearchResults = np.array(pickle.load(fp))
-            # check which parameters already exist and append new parameters
-        searchRange = []
-        for parameter in pcaComponentSearch:
-            if (parameter in(gridSearchResults[:,0]))==False:
-                searchRange.append(parameter)
-    else:
-        gridSearchResults=np.array([])
-        searchRange = pcaComponentSearch
-
-    # with open (roughGridSearchFile, 'rb') as fp:
-    #         tempResults = pickle.load(fp)
-    # newResults = tempResults
-    
-    if len(searchRange)>0:
-        newResults = pipeline.gridSearch(searchRange)
         if len(gridSearchResults) == 0:
             gridSearchResults = newResults
         else:
@@ -203,34 +193,165 @@ if __name__=="__main__":
         
         with open(GridSearchClassifiersFile, 'wb') as fp:
             pickle.dump(gridSearchResults, fp)
+    
+   
+    # def gridSearchPca(self, componentsList):
+    #     results = []
+    #     run = 1
+    #     for components in componentsList:
+    #         print("Starting search " + str(run) + "/"+str(len(componentsList)))
+    #         run +=1
+    #         start_time = time.time()
 
-    bestKnnPca = 8
-    bestLrPca = 12
+    #         result = [components]
+            
+    #         # Set up validation data
+    #         input_data,_ = pipeline.featureExtraction(components)
+    #         targets = pipeline.trainY
 
-    # Open de search results to load the optimal model parameters
-    with open (GridSearchClassifiersFile, 'rb') as fp:
-        searchResults = np.array(pickle.load(fp))
+    #         # Knn
+    #         print("Starting grid search with "+str(components)+" PCA components for knn.")
+    #         knn_model = KNeighborsClassifier()
+    #         knn_parameters = {'n_neighbors':[1, 3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
+    #         knn_search = GridSearchCV(knn_model, knn_parameters, cv = LeaveOneOut(), verbose=1)            
+    #         knn_search.fit(input_data, targets)
+    #         result.append(knn_search.best_score_)
+    #         result.append(knn_search.best_params_)
+            
+    #         # Logistic regression
+    #         print("Starting grid search with "+str(components)+" PCA components for lr.")
+    #         lr_model = LogisticRegression(max_iter=10000, class_weight='balanced')  
+    #         lr_parameters = {'penalty':('l2', 'none')}
+    #         lr_search = GridSearchCV(lr_model, lr_parameters, cv = LeaveOneOut(), verbose=1)
+    #         lr_search.fit(input_data, targets)
+    #         result.append(lr_search.best_score_)
+    #         result.append(lr_search.best_params_)
 
-    # Evaluate all models on the test data
-    print("The class label names are "+str(pipeline.labelNames))
-    bestKnnSettings = searchResults[searchResults[:,0]==bestKnnPca][0][2]
-    knn_model = KNeighborsClassifier(n_neighbors = bestKnnSettings['n_neighbors'], weights = bestKnnSettings['weights'], p=bestKnnSettings['p'])
-    knnPredictions = pipeline.evaluate(knn_model, bestKnnPca)
-    knnCorrectPredicted = knnPredictions[:,0] == knnPredictions[:,1]
-    knnDifferentIndices = np.where(knnCorrectPredicted==False)
-    knnAccuracy = np.sum(knnCorrectPredicted)/len(knnPredictions)
-    print("KNN classifier test results:")
-    print("  The best model settings for " +str(bestKnnPca)+" PCA components are " + str(bestKnnSettings))
-    print("  The test accuracy is: " + str(knnAccuracy))
-    print("  Indices " + str(knnDifferentIndices)+ " of the test are [labeled, prediced] as: " + str(knnPredictions[knnDifferentIndices]))
+    #         # Bayes
+    #         print("Starting grid search with "+str(components)+" PCA components for Naive Bayes")
+    #         bayesModel = GaussianNB()
+    #         bayesParameters = {}# {'n_estimators':[100, 250, 1000], 'criterion' : ("gini", "entropy")} #{'max_depth':[3,5,7,9,11]}
+    #         bayesSearch = GridSearchCV(bayesModel, bayesParameters, cv = LeaveOneOut(), verbose=1)
+    #         bayesSearch.fit(input_data, targets)
+    #         result.append(bayesSearch.best_score_)
+    #         result.append(bayesSearch.best_params_)
+            
+    #         # Collect results
+    #         results.append(result.copy())
+    #         print("The search took %s seconds." % round((time.time() - start_time),2))
+    #     return results
 
-    bestLrSettings = searchResults[searchResults[:,0]==bestLrPca][0][4]
-    lr_model = LogisticRegression(penalty=bestLrSettings['penalty'], max_iter=10000, class_weight='balanced')  
-    lrPredictions = pipeline.evaluate(lr_model, bestLrPca)
-    lrCorrectPredicted = lrPredictions[:,0] == lrPredictions[:,1]
-    lrDifferentIndices = np.where(lrCorrectPredicted==False)
-    lrAccuracy = np.sum(lrCorrectPredicted)/len(lrPredictions)
-    print("LR classifier test results:")
-    print("  The best model settings for " +str(bestLrPca)+" PCA components are " + str(bestLrSettings))
-    print("  The test accuracy is: " + str(lrAccuracy))
-    print("  Indices " + str(lrDifferentIndices)+ " of the test are [labeled, prediced] as: " + str(lrPredictions[lrDifferentIndices]))
+    # def gridSearchOriginal(self):
+    #     result = []
+
+    #     # Set up validation data
+    #     input_data=pipeline.trainX
+    #     targets = pipeline.trainY
+
+    #     # Knn
+    #     print("Starting grid search on original data with for knn.")
+    #     knn_model = KNeighborsClassifier()
+    #     knn_parameters = {'n_neighbors':[1, 3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
+    #     knn_search = GridSearchCV(knn_model, knn_parameters, cv = LeaveOneOut(), verbose=1)            
+    #     knn_search.fit(input_data, targets)
+    #     result.append(knn_search.best_score_)
+    #     result.append(knn_search.best_params_)
+        
+    #     # Logistic regression
+    #     print("Starting grid search on original data with for lr.")
+    #     lr_model = LogisticRegression(max_iter=10000, class_weight='balanced')  
+    #     lr_parameters = {'penalty':('l2', 'none')}
+    #     lr_search = GridSearchCV(lr_model, lr_parameters, cv = LeaveOneOut(), verbose=1)
+    #     lr_search.fit(input_data, targets)
+    #     result.append(lr_search.best_score_)
+    #     result.append(lr_search.best_params_)
+
+    #     # Bayes
+    #     print("Starting grid search on original data with for Bayes.")
+    #     bayesModel = GaussianNB()
+    #     bayesParameters = {}# {'n_estimators':[100, 250, 1000], 'criterion' : ("gini", "entropy")} #{'max_depth':[3,5,7,9,11]}
+    #     bayesSearch = GridSearchCV(bayesModel, bayesParameters, cv = LeaveOneOut(), verbose=1)
+    #     bayesSearch.fit(input_data, targets)
+    #     result.append(bayesSearch.best_score_)
+    #     result.append(bayesSearch.best_params_)
+    #     print(bayesSearch.best_score_)
+    #     return result
+
+# Evaluation on the test data
+    def evaluateModelsPca(self, bestKnnPca,bestLrPca,bestBayesPca):
+        # Open de search results to load the optimal model parameters
+        with open (GridSearchClassifiersFile, 'rb') as fp:
+            searchResults = np.array(pickle.load(fp))
+
+        # Evaluate all models on the test data
+        print("The class label names are "+str(self.labelNames))
+        
+        bestKnnSettings = searchResults[searchResults[:,0]==bestKnnPca][0][2]
+        print("KNN classifier test results:")
+        print("  The best model settings for " +str(bestKnnPca)+" PCA components are " + str(bestKnnSettings))
+        knn_model = KNeighborsClassifier(n_neighbors = bestKnnSettings['n_neighbors'], weights = bestKnnSettings['weights'], p=bestKnnSettings['p'])
+        self.evaluatePca(knn_model, bestKnnPca)
+
+        bestLrSettings = searchResults[searchResults[:,0]==bestLrPca][0][4]
+        print("LR classifier test results:")
+        print("  The best model settings for " +str(bestLrPca)+" PCA components are " + str(bestLrSettings))
+        lr_model = LogisticRegression(penalty=bestLrSettings['penalty'], max_iter=10000, class_weight='balanced')  
+        self.evaluatePca(lr_model, bestLrPca)
+
+        bestBayesSettings = searchResults[searchResults[:,0]==bestLrPca][0][6]
+        print("Bayes classifier test results:")
+        print("  The best model settings for " +str(bestBayesPca)+" PCA components are " + str(bestBayesSettings))
+        bayesModel = GaussianNB()
+        self.evaluatePca(bayesModel, bestBayesPca)
+       
+    def evaluatePca(self, model, pcaComponents):
+        # Evaluate the model on the test data
+        trainX, augmentedTrainX = pipeline.featureExtraction(pcaComponents)
+        testX = pipeline.pca.transform(pipeline.testX)
+        augmentedTestX = pipeline.pcaAugmented.transform(pipeline.augmentedTestX)
+        
+        # Copy the model such that there is an untrained model for augmentation
+        modelAugmented = model
+        model.fit(trainX, pipeline.trainY)
+        predictions = model.predict(testX)
+        predictions = np.vstack((pipeline.testY, predictions)).T
+        
+        CorrectPredicted = predictions[:,0] == predictions[:,1]
+        DifferentIndices = np.where(CorrectPredicted==False)
+        Accuracy = np.sum(CorrectPredicted)/len(predictions)
+        print("  PCA on original data set")
+        print("    The test accuracy is: " + str(Accuracy))
+        print("    Indices " + str(DifferentIndices)+ " of the test are [labeled, prediced] as: " + str(predictions[DifferentIndices]))
+    
+        modelAugmented.fit(augmentedTrainX, pipeline.augmentedTrainY)
+        predictions = modelAugmented.predict(augmentedTestX)
+        predictions = np.vstack((pipeline.testY, predictions)).T
+        
+        CorrectPredicted = predictions[:,0] == predictions[:,1]
+        DifferentIndices = np.where(CorrectPredicted==False)
+        Accuracy = np.sum(CorrectPredicted)/len(predictions)
+        print("  PCA on augmented data set")
+        print("    The test accuracy is: " + str(Accuracy))
+        print("    Indices " + str(DifferentIndices)+ " of the test are [labeled, prediced] as: " + str(predictions[DifferentIndices]))
+
+    def evaluateModelsOriginal(self):
+        pass
+
+if __name__=="__main__":
+    pipeline = Pipeline()
+    pipeline.splitData()
+    pipeline.preProcess()
+    estimatedComponents = pipeline.pcaSearch() 
+
+    # Specify the array for which pca components the grid search must be conducted
+    pcaComponentSearch = [*range(1, 40, 1)]
+    pcaComponentSearch.extend([*range(40, estimatedComponents+1, 10)])
+    pcaComponentSearch = [len(pipeline.trainX[0])]
+    pipeline.classifierGridSearch(pcaComponentSearch)
+
+    bestKnnPca = 12
+    bestLrPca = 11
+    bestBayesPca = 8
+
+    pipeline.evaluateModelsPca(bestKnnPca,bestLrPca,bestBayesPca)
+    pipeline.evaluateModelsOriginal()

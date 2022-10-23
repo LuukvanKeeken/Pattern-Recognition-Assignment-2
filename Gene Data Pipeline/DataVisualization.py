@@ -84,43 +84,55 @@ def featureExtraction(numberOfComponents):
         plt.savefig(f"Figures{os.sep}GenesVisualization")
 
 def plotGridAccuracy(performances):
-    fig = plt.figure(figsize = (8,8))
     xAxis = performances[:,0].astype('float64')
     performanceKnn = performances[:,1].astype('float64')
     performanceLr = performances[:,3].astype('float64')
+    performanceBayes = performances[:,5].astype('float64')
 
-    fig, ax = plt.subplots(figsize=(5,4))
+    fig, ax = plt.subplots(figsize=(12,7))
     ax.plot(xAxis, performanceKnn, label="KNN")
     ax.plot(xAxis, performanceLr, label="LR")
+    ax.plot(xAxis, performanceBayes, label="Bayes")
 
-    # inset axes....
-    axins = ax.inset_axes([0.25, 0.3, 0.72, 0.47])
-    axins.plot(xAxis, performanceKnn, label="KNN")
-    axins.plot(xAxis, performanceLr, label="LR")
+    zoomPcaMin = 1
+    zoomPcaMax = 15
+    knnZoomPerformance = performanceKnn[zoomPcaMin:zoomPcaMax]
+    lrZoomPerformance = performanceLr[zoomPcaMin:zoomPcaMax]
+    bayesZoomPerformance = performanceBayes[zoomPcaMin:zoomPcaMax]
+    knnIndexMax = np.argmax(knnZoomPerformance)+zoomPcaMin
+    lrIndexMax = np.argmax(lrZoomPerformance)+zoomPcaMin
+    bayesIndexMax = np.argmax(bayesZoomPerformance)+zoomPcaMin
+
+    axins = ax.inset_axes([0.1, 0.1, 0.8, 0.47])
+    axins.plot(xAxis-1, performanceKnn, label="KNN", color='blue')
+    axins.plot((knnIndexMax,knnIndexMax), (performanceKnn[knnIndexMax],0),color='blue',linestyle=':')
+    axins.plot(xAxis-1, performanceLr, label="LR", color = 'orange')
+    axins.plot((lrIndexMax,lrIndexMax), (performanceLr[lrIndexMax],0),color='orange',linestyle=':')
+    axins.plot(xAxis-1, performanceBayes, label="Bayes", color='green')
+    axins.plot((bayesIndexMax,bayesIndexMax), (performanceBayes[bayesIndexMax],0),color='green',linestyle=':')
+    #axins.axvline(knnIndexMax)
+    
+    #testX = knnIndexMax
+    #testY = performanceKnn[knnIndexMax]
+    #axins.plot(testX,testY, marker="o", markersize=5, markerfacecolor = "black")
+
 
     # sub region of the original image
-    x1, x2, y1, y2 = 2, 13, 0.85, 1.005
+    x1, x2, y1, y2 = zoomPcaMin, zoomPcaMax, 0.85, 1.005
     axins.set_xlim(x1, x2)
     axins.xaxis.set_major_locator(MaxNLocator(integer=True))
+    axins.xaxis.set_ticks(range(zoomPcaMin,zoomPcaMax+1,1))
     axins.set_ylim(y1, y2)
-    #axins.set_xticklabels([])
-    #axins.set_yticklabels([])
-
     ax.indicate_inset_zoom(axins, edgecolor="black")
 
-    # plt.plot(xAxis, performanceKnn, label="KNN")
-    # plt.plot(xAxis, performanceLr, label="LR")
-    # ax = fig.gca()
-    # ax.xaxis.set_major_locator(MaxNLocator(integer=True))
-    # plt.xticks(xAxis)
     plt.xlabel("PCA dimensions")
     plt.ylabel("Accuracy")
-    # plt.ylim((0.85,1.05))
     plt.xlim((1,170))
-    plt.legend()
+    #plt.legend()
+    plt.legend(bbox_to_anchor=(0.85,0.78))
     plt.title("Best model accuracies with PCA components")
     figureName =f"Figures{os.sep}GenesClassifiersGridSearch" 
-    plt.savefig(figureName)
+    plt.savefig(figureName, dpi = 300, bbox_inches='tight')
 
 
 if __name__=="__main__":

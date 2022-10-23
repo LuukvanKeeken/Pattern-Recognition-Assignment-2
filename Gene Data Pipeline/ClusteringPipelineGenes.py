@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import csv
 
 # Read in raw data
-rawDataFile = './PreProcessedData/rawData.npy'
+#rawDataFile = './PreProcessedData/rawData.npy'
+rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
 rawData = np.load(rawDataFile)
 
 # Preprocess the raw data before PCA

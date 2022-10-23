@@ -10,9 +10,9 @@ from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 
 # Read in raw data
-rawDataFile = './PreProcessedData/rawData.npy'
+rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
 rawData = np.load(rawDataFile)
-labelsFile = './PreProcessedData/rawLabels.npy'
+labelsFile = './Gene Data Pipeline/Data/labels.npy'
 labels = np.load(labelsFile)
 
 # Split the data into training and test
@@ -27,7 +27,7 @@ rawTestX = rawDataX[len(rawDataX)-testSetCount:len(rawDataX)]
 testY = dataY[len(dataY)-testSetCount:len(dataY)]
 
 # Augment the training data
-oversample = SMOTE(sampling_strategy = {'BRCA':273, 'LUAD':273, 'PRAD':273, 'KIRC':273, 'COAD':273})
+oversample = SMOTE(sampling_strategy = {0:273, 1:273, 2:273, 3:273, 4:273})
 trainX, trainY = oversample.fit_resample(rawTrainX, trainY)
 
 
@@ -44,7 +44,7 @@ preprocessedTestData = np.delete(centeredTestData, zeroColumns, axis = 1)/nonZer
 
 
 # Train KNN model with earlier found best settings on reduced augmented data
-knn_PCA = PCA(8)
+knn_PCA = PCA(12)
 knn_reducedTrainingData = knn_PCA.fit_transform(preprocessedTrainingData)
 knn_model = KNeighborsClassifier(n_neighbors=9, p=2, weights='uniform')
 knn_model.fit(knn_reducedTrainingData, trainY)
@@ -55,7 +55,7 @@ print(f"KNN's score on augmented data: {knn_model.score(knn_reducedTestData, tes
 
 
 # Train Logistic Regression model with earlier found best settings on reduced augmented data
-lr_PCA = PCA(12)
+lr_PCA = PCA(11)
 lr_reducedTrainingData = lr_PCA.fit_transform(preprocessedTrainingData)
 lr_model = LogisticRegression(penalty = 'l2', max_iter = 500)
 lr_model.fit(lr_reducedTrainingData, trainY)
