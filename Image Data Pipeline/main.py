@@ -1,8 +1,8 @@
 from sklearn.model_selection import train_test_split
 from DataHandler import DataHandler
+from SURF import SURF
 from Models import SVM
 import os
-
 
 def main():
     
@@ -20,13 +20,16 @@ def main():
 
     target_dict = dh.convertLabelsToNumeric()
 
-    dh.preprocessData()
+    images = dh.preprocessData()
 
+    # Feature extraction
+    surf = SURF()
+    surf.extract_features(images[1])
     # Train - Test split
     X_train, X_test, y_train, y_test = train_test_split(
     dh.img_data, dh.class_labels, test_size=0.2, shuffle=True
     )
-
+    
     # Training and Testing the Model
     model = SVM()
     model.train(X_train, y_train)
