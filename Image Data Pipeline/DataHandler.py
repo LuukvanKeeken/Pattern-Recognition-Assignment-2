@@ -55,4 +55,4 @@ class DataHandler:
         # For now only flatten the images
         images = np.array(self.img_data)
         self.img_data = images.reshape((len(self.img_data), -1))
-        
+        return images
