@@ -10,6 +10,8 @@ from sklearn.model_selection import LeaveOneOut
 import time
 from sklearn.naive_bayes import GaussianNB
 from imblearn.over_sampling import SMOTE
+from fcmeans import FCM
+from sklearn.metrics import silhouette_score
 
 # File locations
 dataFileName = './Data/Genes/data.csv'
@@ -19,7 +21,7 @@ labelsFileName = './Data/Genes/labels.csv'
 rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
 labelsFile = './Gene Data Pipeline/Data/labels.npy'
 labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
-GridSearchClassifiersFile = './Gene Data Pipeline/Data/ClassifiersGridSearch.npy'
+GridSearchFile = './Gene Data Pipeline/Data/GridSearch.npy'
 
 LoadDataset = False
 
@@ -115,10 +117,10 @@ class Pipeline:
         return reducedDimensionsData, AugmentedReducedDimensionsData
 
 # Grid search on training data. Both original and augmented 
-    def classifierGridSearch(self, pcaComponentSearch):
+    def gridSearch(self, pcaComponentSearch):
         # If a grid search already is performed, load the file to only search new components
-        if path.exists(GridSearchClassifiersFile):
-            with open (GridSearchClassifiersFile, 'rb') as fp:
+        if path.exists(GridSearchFile):
+            with open (GridSearchFile, 'rb') as fp:
                 gridSearchResults = np.array(pickle.load(fp))
                 # check which parameters already exist and append new parameters
             searchRange = []
@@ -176,12 +178,30 @@ class Pipeline:
             bayesSearch.fit(input_data, targets)
             result.append(bayesSearch.best_score_)
             result.append(bayesSearch.best_params_)
-            
+
+
+            # Set the minimum and maximum numbers of clusters to check
+            minimum_number_of_clusters = 2
+            maximum_number_of_clusters = 30
+            clusters_to_check = np.arange(minimum_number_of_clusters, maximum_number_of_clusters + 1, dtype = np.int32)
+            # For each number of clusters to check, fit a fuzzy c-means model 
+            SC_original_data = []
+            for c in clusters_to_check:
+                clm = FCM(n_clusters = c)
+                clm.fit(input_data)
+                labels = clm.predict(input_data)
+                silhouette_coefficient_original = silhouette_score(input_data, labels)
+                SC_original_data.append(silhouette_coefficient_original)
+            bestIndex = np.argmax(SC_original_data)
+            bestScore = SC_original_data[bestIndex]
+            bestParameters = {'clusters': clusters_to_check[bestIndex]}
+            result.append(bestScore)
+            result.append(bestParameters)
             # Collect results
             print("The search took %s seconds." % round((time.time() - start_time),2))
             results.append(result)
 
-        newResults = results#[result]
+        newResults = results
         #newResults = self.gridSearchPca(searchRange)
         # Grid search on the original data set
         #result = self.gridSearchOriginal(self)
@@ -191,96 +211,13 @@ class Pipeline:
         else:
             gridSearchResults = np.append(gridSearchResults,newResults, axis=0)
         
-        with open(GridSearchClassifiersFile, 'wb') as fp:
+        with open(GridSearchFile, 'wb') as fp:
             pickle.dump(gridSearchResults, fp)
     
-   
-    # def gridSearchPca(self, componentsList):
-    #     results = []
-    #     run = 1
-    #     for components in componentsList:
-    #         print("Starting search " + str(run) + "/"+str(len(componentsList)))
-    #         run +=1
-    #         start_time = time.time()
-
-    #         result = [components]
-            
-    #         # Set up validation data
-    #         input_data,_ = pipeline.featureExtraction(components)
-    #         targets = pipeline.trainY
-
-    #         # Knn
-    #         print("Starting grid search with "+str(components)+" PCA components for knn.")
-    #         knn_model = KNeighborsClassifier()
-    #         knn_parameters = {'n_neighbors':[1, 3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
-    #         knn_search = GridSearchCV(knn_model, knn_parameters, cv = LeaveOneOut(), verbose=1)            
-    #         knn_search.fit(input_data, targets)
-    #         result.append(knn_search.best_score_)
-    #         result.append(knn_search.best_params_)
-            
-    #         # Logistic regression
-    #         print("Starting grid search with "+str(components)+" PCA components for lr.")
-    #         lr_model = LogisticRegression(max_iter=10000, class_weight='balanced')  
-    #         lr_parameters = {'penalty':('l2', 'none')}
-    #         lr_search = GridSearchCV(lr_model, lr_parameters, cv = LeaveOneOut(), verbose=1)
-    #         lr_search.fit(input_data, targets)
-    #         result.append(lr_search.best_score_)
-    #         result.append(lr_search.best_params_)
-
-    #         # Bayes
-    #         print("Starting grid search with "+str(components)+" PCA components for Naive Bayes")
-    #         bayesModel = GaussianNB()
-    #         bayesParameters = {}# {'n_estimators':[100, 250, 1000], 'criterion' : ("gini", "entropy")} #{'max_depth':[3,5,7,9,11]}
-    #         bayesSearch = GridSearchCV(bayesModel, bayesParameters, cv = LeaveOneOut(), verbose=1)
-    #         bayesSearch.fit(input_data, targets)
-    #         result.append(bayesSearch.best_score_)
-    #         result.append(bayesSearch.best_params_)
-            
-    #         # Collect results
-    #         results.append(result.copy())
-    #         print("The search took %s seconds." % round((time.time() - start_time),2))
-    #     return results
-
-    # def gridSearchOriginal(self):
-    #     result = []
-
-    #     # Set up validation data
-    #     input_data=pipeline.trainX
-    #     targets = pipeline.trainY
-
-    #     # Knn
-    #     print("Starting grid search on original data with for knn.")
-    #     knn_model = KNeighborsClassifier()
-    #     knn_parameters = {'n_neighbors':[1, 3, 5, 7, 9, 11, 13, 15],'p':[1,2],'weights':('uniform', 'distance')} 
-    #     knn_search = GridSearchCV(knn_model, knn_parameters, cv = LeaveOneOut(), verbose=1)            
-    #     knn_search.fit(input_data, targets)
-    #     result.append(knn_search.best_score_)
-    #     result.append(knn_search.best_params_)
-        
-    #     # Logistic regression
-    #     print("Starting grid search on original data with for lr.")
-    #     lr_model = LogisticRegression(max_iter=10000, class_weight='balanced')  
-    #     lr_parameters = {'penalty':('l2', 'none')}
-    #     lr_search = GridSearchCV(lr_model, lr_parameters, cv = LeaveOneOut(), verbose=1)
-    #     lr_search.fit(input_data, targets)
-    #     result.append(lr_search.best_score_)
-    #     result.append(lr_search.best_params_)
-
-    #     # Bayes
-    #     print("Starting grid search on original data with for Bayes.")
-    #     bayesModel = GaussianNB()
-    #     bayesParameters = {}# {'n_estimators':[100, 250, 1000], 'criterion' : ("gini", "entropy")} #{'max_depth':[3,5,7,9,11]}
-    #     bayesSearch = GridSearchCV(bayesModel, bayesParameters, cv = LeaveOneOut(), verbose=1)
-    #     bayesSearch.fit(input_data, targets)
-    #     result.append(bayesSearch.best_score_)
-    #     result.append(bayesSearch.best_params_)
-    #     print(bayesSearch.best_score_)
-    #     return result
-
 # Evaluation on the test data
-    def evaluateModelsPca(self, bestKnnPca,bestLrPca,bestBayesPca):
+    def evaluateModelsPca(self, bestKnnPca,bestLrPca,bestBayesPca, bestFcMeansPca):
         # Open de search results to load the optimal model parameters
-        with open (GridSearchClassifiersFile, 'rb') as fp:
+        with open (GridSearchFile, 'rb') as fp:
             searchResults = np.array(pickle.load(fp))
 
         # Evaluate all models on the test data
@@ -303,6 +240,12 @@ class Pipeline:
         print("  The best model settings for " +str(bestBayesPca)+" PCA components are " + str(bestBayesSettings))
         bayesModel = GaussianNB()
         self.evaluatePca(bayesModel, bestBayesPca)
+
+        # bestFcMeanSettings = searchResults[searchResults[:,0]==bestLrPca][0][8]
+        # print("FC-means classifier test results:")
+        # print("  The best model settings for " +str(bestFcMeansPca)+" PCA components are " + str(bestFcMeanSettings))
+        # clm = FCM(n_clusters = bestFcMeanSettings['clusters'])
+        # self.evaluatePca(clm, bestFcMeansPca)
        
     def evaluatePca(self, model, pcaComponents):
         # Evaluate the model on the test data
@@ -310,9 +253,12 @@ class Pipeline:
         testX = pipeline.pca.transform(pipeline.testX)
         augmentedTestX = pipeline.pcaAugmented.transform(pipeline.augmentedTestX)
         
+
+
         # Copy the model such that there is an untrained model for augmentation
         modelAugmented = model
         model.fit(trainX, pipeline.trainY)
+        modelAugmented.fit(augmentedTrainX, pipeline.augmentedTrainY)
         predictions = model.predict(testX)
         predictions = np.vstack((pipeline.testY, predictions)).T
         
@@ -323,7 +269,6 @@ class Pipeline:
         print("    The test accuracy is: " + str(Accuracy))
         print("    Indices " + str(DifferentIndices)+ " of the test are [labeled, prediced] as: " + str(predictions[DifferentIndices]))
     
-        modelAugmented.fit(augmentedTrainX, pipeline.augmentedTrainY)
         predictions = modelAugmented.predict(augmentedTestX)
         predictions = np.vstack((pipeline.testY, predictions)).T
         
@@ -346,12 +291,13 @@ if __name__=="__main__":
     # Specify the array for which pca components the grid search must be conducted
     pcaComponentSearch = [*range(1, 40, 1)]
     pcaComponentSearch.extend([*range(40, estimatedComponents+1, 10)])
-    pcaComponentSearch = [len(pipeline.trainX[0])]
-    pipeline.classifierGridSearch(pcaComponentSearch)
+    pcaComponentSearch.extend([len(pipeline.trainX[0])])
+    pipeline.gridSearch(pcaComponentSearch)
 
     bestKnnPca = 12
     bestLrPca = 11
     bestBayesPca = 8
+    bestFcMeansPca = 1
 
-    pipeline.evaluateModelsPca(bestKnnPca,bestLrPca,bestBayesPca)
+    pipeline.evaluateModelsPca(bestKnnPca,bestLrPca,bestBayesPca, bestFcMeansPca)
     pipeline.evaluateModelsOriginal()
