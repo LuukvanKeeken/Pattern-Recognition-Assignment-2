@@ -3,6 +3,8 @@ import numpy as np
 from cv2 import resize, GaussianBlur, subtract, KeyPoint, INTER_LINEAR, INTER_NEAREST
 from functools import cmp_to_key
 import logging
+import cv2
+import matplotlib.pyplot as plt
 
 class SURF:
     def __init__(self):
@@ -116,7 +118,7 @@ class SURF:
                                 third_image[i-1:i+2, j-1:j+2]]).astype('float32') / 255.
             gradient = self.computeGradientAtCenterPixel(pixel_cube)
             hessian = self.computeHessianAtCenterPixel(pixel_cube)
-            extremum_update = -np.lstsq(hessian, gradient, rcond=None)[0]
+            extremum_update = -np.linalg.lstsq(hessian, gradient, rcond=None)[0]
             if abs(extremum_update[0]) < 0.5 and abs(extremum_update[1]) < 0.5 and abs(extremum_update[2]) < 0.5:
                 break
             j += int(round(extremum_update[0]))
@@ -134,7 +136,7 @@ class SURF:
         if abs(functionValueAtUpdatedExtremum) * num_intervals >= contrast_threshold:
             xy_hessian = hessian[:2, :2]
             xy_hessian_trace = np.trace(xy_hessian)
-            xy_hessian_det = np.det(xy_hessian)
+            xy_hessian_det = np.linalg.det(xy_hessian)
             if xy_hessian_det > 0 and eigenvalue_ratio * (xy_hessian_trace ** 2) < ((eigenvalue_ratio + 1) ** 2) * xy_hessian_det:
                 # Contrast check passed -- construct and return OpenCV KeyPoint object
                 keypoint = KeyPoint()
@@ -178,12 +180,21 @@ class SURF:
     def computeKeypointsAndDescriptors(self, image, sigma=1.6, num_intervals=3, assumed_blur=0.5, image_border_width=5):
         """Compute SIFT keypoints and descriptors for an input image
         """
-        image = image.astype('float32')
         base_image = self.generateBaseImage(image, sigma, assumed_blur)
+        cv2.imshow("Base image", base_image)
+        cv2.waitKey(0) 
         num_octaves = self.computeNumberOfOctaves(base_image.shape)
+        print(f"Number of octaves: {num_octaves}")
         gaussian_kernels = self.generateGaussianKernels(sigma, num_intervals)
+        print(f"gaussian kernels: {gaussian_kernels}")
         gaussian_images = self.generateGaussianImages(base_image, num_octaves, gaussian_kernels)
+        for image in gaussian_images[0]:
+            cv2.imshow("Gaussian image", image)
+            cv2.waitKey(0) 
         dog_images = self.generateDoGImages(gaussian_images)
+        for image in dog_images[0]:
+            cv2.imshow("dog_images", image)
+            cv2.waitKey(0) 
         keypoints = self.findScaleSpaceExtrema(gaussian_images, dog_images, num_intervals, sigma, image_border_width)
         print(keypoints)
         # keypoints = self.removeDuplicateKeypoints(keypoints)
