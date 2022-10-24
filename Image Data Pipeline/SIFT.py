@@ -179,7 +179,6 @@ class SIFT:
     def computeKeypointsAndDescriptors(self, image, sigma=1.6, num_intervals=3, assumed_blur=0.5, image_border_width=5):
         """Compute SIFT keypoints and descriptors for an input image
         """
-        image = self.convert_to_greyscale(image)
         base_image = self.generateBaseImage(image, sigma, assumed_blur)
         # cv2.imshow("Base image", base_image)
         # cv2.waitKey(0) 
@@ -196,11 +195,11 @@ class SIFT:
         #     cv2.imshow("dog_images", image)
         #     cv2.waitKey(0) 
         keypoints = self.findScaleSpaceExtrema(gaussian_images, dog_images, num_intervals, sigma, image_border_width)
-        print(keypoints)
+        keypoints.sort(key=lambda x: x.response, reverse=True)
+        keypoints = keypoints[0:10]
         keypoints = self.removeDuplicateKeypoints(keypoints)
-        print(keypoints)
         keypoints = self.convertKeypointsToInputImageSize(keypoints)
-        print(keypoints)
+
         descriptors = self.generateDescriptors(keypoints, gaussian_images)
         return keypoints, descriptors
 
@@ -309,7 +308,6 @@ class SIFT:
         """Generate descriptors for each keypoint
         """
         descriptors = []
-        print(keypoints)
         for keypoint in keypoints:
             octave, layer, scale = self.unpackOctave(keypoint)
             gaussian_image = gaussian_images[octave + 1, layer]
@@ -385,7 +383,6 @@ class SIFT:
                 histogram_tensor[row_bin_floor + 2, col_bin_floor + 1, (orientation_bin_floor + 1) % num_bins] += c101
                 histogram_tensor[row_bin_floor + 2, col_bin_floor + 2, orientation_bin_floor] += c110
                 histogram_tensor[row_bin_floor + 2, col_bin_floor + 2, (orientation_bin_floor + 1) % num_bins] += c111
-            print(f"histogram tensor {histogram_tensor}")
             descriptor_vector = histogram_tensor[1:-1, 1:-1, :].flatten()  # Remove histogram borders
             # Threshold and normalize descriptor_vector
             threshold = np.linalg.norm(descriptor_vector) * descriptor_max_value
@@ -398,5 +395,4 @@ class SIFT:
             descriptors.append(descriptor_vector)
         return np.array(descriptors, dtype='float32')
 
-    def convert_to_greyscale(self, img):
-        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+  
