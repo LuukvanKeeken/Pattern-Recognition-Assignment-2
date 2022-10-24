@@ -1,6 +1,6 @@
 from sklearn.model_selection import train_test_split
 from DataHandler import DataHandler
-from SURF import SURF
+from SIFT import SIFT
 from Models import SVM
 import cv2
 import os
@@ -24,11 +24,11 @@ def main():
     images = dh.preprocessData()
 
     # Feature extraction
-    surf = SURF()
+    sift = SIFT()
     img = cv2.imread("BigCats/Jaguar/jaguar-859412__340.jpg")
     cv2.imshow("img", img)
     cv2.waitKey(0) 
-    surf.extract_features(img)
+    sift.computeKeypointsAndDescriptors(img)
     # Train - Test split
     X_train, X_test, y_train, y_test = train_test_split(
     dh.img_data, dh.class_labels, test_size=0.2, shuffle=True
