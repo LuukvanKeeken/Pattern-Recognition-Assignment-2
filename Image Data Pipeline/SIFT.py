@@ -5,7 +5,6 @@ from functools import cmp_to_key
 import logging
 import cv2
 import matplotlib.pyplot as plt
-from PIL import Image
 
 class SIFT:
     def __init__(self):
@@ -182,8 +181,8 @@ class SIFT:
         """
         image = self.convert_to_greyscale(image)
         base_image = self.generateBaseImage(image, sigma, assumed_blur)
-        cv2.imshow("Base image", base_image)
-        cv2.waitKey(0) 
+        # cv2.imshow("Base image", base_image)
+        # cv2.waitKey(0) 
         num_octaves = self.computeNumberOfOctaves(base_image.shape)
         print(f"Number of octaves: {num_octaves}")
         gaussian_kernels = self.generateGaussianKernels(sigma, num_intervals)
@@ -197,11 +196,12 @@ class SIFT:
         #     cv2.imshow("dog_images", image)
         #     cv2.waitKey(0) 
         keypoints = self.findScaleSpaceExtrema(gaussian_images, dog_images, num_intervals, sigma, image_border_width)
-        keypoints = self.removeDuplicateKeypoints(keypoints)
-        keypoints = self.convertKeypointsToInputImageSize(keypoints)
-        descriptors = self.generateDescriptors(keypoints, gaussian_images)
         print(keypoints)
-        print(descriptors)
+        keypoints = self.removeDuplicateKeypoints(keypoints)
+        print(keypoints)
+        keypoints = self.convertKeypointsToInputImageSize(keypoints)
+        print(keypoints)
+        descriptors = self.generateDescriptors(keypoints, gaussian_images)
         return keypoints, descriptors
 
     def computeKeypointsWithOrientations(self, keypoint, octave_index, gaussian_image, radius_factor=3, num_bins=36, peak_ratio=0.8, scale_factor=1.5):
@@ -309,7 +309,7 @@ class SIFT:
         """Generate descriptors for each keypoint
         """
         descriptors = []
-
+        print(keypoints)
         for keypoint in keypoints:
             octave, layer, scale = self.unpackOctave(keypoint)
             gaussian_image = gaussian_images[octave + 1, layer]
@@ -385,7 +385,7 @@ class SIFT:
                 histogram_tensor[row_bin_floor + 2, col_bin_floor + 1, (orientation_bin_floor + 1) % num_bins] += c101
                 histogram_tensor[row_bin_floor + 2, col_bin_floor + 2, orientation_bin_floor] += c110
                 histogram_tensor[row_bin_floor + 2, col_bin_floor + 2, (orientation_bin_floor + 1) % num_bins] += c111
-
+            print(f"histogram tensor {histogram_tensor}")
             descriptor_vector = histogram_tensor[1:-1, 1:-1, :].flatten()  # Remove histogram borders
             # Threshold and normalize descriptor_vector
             threshold = np.linalg.norm(descriptor_vector) * descriptor_max_value
@@ -396,7 +396,7 @@ class SIFT:
             descriptor_vector[descriptor_vector < 0] = 0
             descriptor_vector[descriptor_vector > 255] = 255
             descriptors.append(descriptor_vector)
-            return np.array(descriptors, dtype='float32')
+        return np.array(descriptors, dtype='float32')
 
     def convert_to_greyscale(self, img):
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)

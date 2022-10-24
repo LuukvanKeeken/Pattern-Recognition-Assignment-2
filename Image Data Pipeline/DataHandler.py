@@ -18,11 +18,11 @@ class DataHandler:
             for file in os.listdir(os.path.join(img_folder, class_label)):
         
                 image_path= os.path.join(img_folder, class_label,  file)
-                image= cv2.imread( image_path, cv2.COLOR_BGR2RGB)
+                image= cv2.imread(image_path)
                 image=cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH),interpolation = cv2.INTER_AREA) # resize images to make it uniform
                 image=np.array(image)
                 image = image.astype('float32')
-                image /= 255 # scale down images from 0-255 to 0-1 for better convergence
+                # image /= 255 # scale down images from 0-255 to 0-1 for better convergence (doesnt work with sift)
 
                 self.img_data.append(image)
                 self.class_labels.append(class_label)
@@ -54,5 +54,6 @@ class DataHandler:
     def preprocessData(self):
         # For now only flatten the images
         images = np.array(self.img_data)
-        self.img_data = images.reshape((len(self.img_data), -1))
+        # self.img_data = images.reshape((len(self.img_data), -1))
         return images
+    
