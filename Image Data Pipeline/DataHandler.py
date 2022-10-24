@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import cv2
 import os
 import random
-
+from PIL import Image
 
 class DataHandler:
 
@@ -20,8 +20,8 @@ class DataHandler:
                 image_path= os.path.join(img_folder, class_label,  file)
                 image= cv2.imread(image_path)
                 image=cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH),interpolation = cv2.INTER_AREA) # resize images to make it uniform
-                image=np.array(image)
-                image = image.astype('float32')
+                # image=np.array(image)
+                # image = image.astype('float32')
                 # image /= 255 # scale down images from 0-255 to 0-1 for better convergence (doesnt work with sift)
 
                 self.img_data.append(image)
@@ -51,9 +51,44 @@ class DataHandler:
         self.class_labels =  [target_dict[self.class_labels[i]] for i in range(len(self.class_labels))]
         return target_dict
 
+    
+    def convert_to_greyscale(self, img):
+        return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+
+    def apply_salt_and_pepper_noise(self, image, prob):
+        """Applies salt and pepper noise to an image."""
+        output = np.copy(np.array(image))
+
+        # add salt
+        nb_salt = np.ceil(prob * output.size * 0.5)
+        coords = [np.random.randint(0, i - 1, int(nb_salt)) for i in output.shape]
+        output[coords] = 255
+
+        # add pepper
+        nb_pepper = np.ceil(prob * output.size * 0.5)
+        coords = [np.random.randint(0, i - 1, int(nb_pepper))
+                for i in output.shape]
+        output[coords] = 0
+        return output
+
+
+    def apply_salt_noise(self, image, prob):
+        """Applies salt noise to an image"""
+        output = np.copy(np.array(image))
+        print(output)
+        # add salt
+        nb_salt = np.ceil(prob * output.size)
+        coords = [np.random.randint(0, i - 1, int(nb_salt)) for i in output.shape]
+        output[coords] = 255
+
+        return output
+
+
     def preprocessData(self):
         # For now only flatten the images
         images = np.array(self.img_data)
-        # self.img_data = images.reshape((len(self.img_data), -1))
+        images = np.array([self.convert_to_greyscale(image) for image in images])
+        # salt_and_pepper_images = np.array([self.apply_salt_and_pepper_noise(image, 0.5) for image in images])
         return images
     
