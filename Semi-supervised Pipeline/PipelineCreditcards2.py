@@ -62,7 +62,6 @@ if __name__=="__main__":
         pipeline = Pipeline(rawCreditcardDataFile)
 
         # Split the data into 80% training and 20% testing data.
-        # Of all the training data, split 10% for cross-validation.
         # Of the remaining training data, split 70% into unlabeled training data.
         training_portion = 0.8
         unlabeled_portion = 0.7
