@@ -25,13 +25,21 @@ def main():
 
     # Feature extraction
     sift = SIFT()
+    vocabulary = []
+    
     img = cv2.imread("BigCats/Jaguar/jaguar-859412__340.jpg")
+    print(img)
     cv2.imshow("img", img)
     cv2.waitKey(0) 
-    sift.computeKeypointsAndDescriptors(img)
+    for img in images:
+        cv2.imshow("img", img)
+        cv2.waitKey(0) 
+        print(img)
+        keypoints, descriptors = sift.computeKeypointsAndDescriptors(img)
+        print(keypoints)
     # Train - Test split
     X_train, X_test, y_train, y_test = train_test_split(
-    dh.img_data, dh.class_labels, test_size=0.2, shuffle=True
+    descriptors, dh.class_labels, test_size=0.2, shuffle=True
     )
     
     # Training and Testing the Model
