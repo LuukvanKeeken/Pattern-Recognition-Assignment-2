@@ -94,6 +94,10 @@ class Pipeline:
         augmentedCenteredTestingData = self.rawTestX - augmentedMean
         self.augmentedTestX = np.delete(augmentedCenteredTestingData,augmentedZeroColumns,axis=1)/augmentedNonZeroSD
 
+        # Preprocess the full data set as well for clustering
+        self.dataSetX = (self.rawData-np.mean(self.rawData))/np.std(self.rawData)
+
+
     def pcaSearch(self):
         n_comps = len(self.trainX)
         pca = PCA(n_components=n_comps)
@@ -112,9 +116,11 @@ class Pipeline:
     def featureExtraction(self, numberOfComponents):
         self.pca = PCA(numberOfComponents)
         self.pcaAugmented = PCA(numberOfComponents)
+        dataSetPca = PCA(numberOfComponents)
         reducedDimensionsData = self.pca.fit_transform(self.trainX)
         AugmentedReducedDimensionsData = self.pcaAugmented.fit_transform(self.augmentedTrainX)
-        return reducedDimensionsData, AugmentedReducedDimensionsData
+        dataSetX = dataSetPca.fit_transform(self.dataSetX)
+        return reducedDimensionsData, AugmentedReducedDimensionsData, dataSetX
 
 # Grid search on training data. Both original and augmented 
     def gridSearch(self, pcaComponentSearch):
@@ -147,10 +153,12 @@ class Pipeline:
             
             if components == len(self.trainX[0]):
                 input_data=pipeline.trainX
+                dataSetX = self.dataSetX
                 targets = pipeline.trainY
             else:
-                input_data,_ = pipeline.featureExtraction(components)
+                input_data,_,dataSetX = pipeline.featureExtraction(components)
                 targets = pipeline.trainY
+
 
             # Knn
             print("Starting grid search with "+str(components)+" components for knn.")
@@ -188,9 +196,9 @@ class Pipeline:
             SC_original_data = []
             for c in clusters_to_check:
                 clm = FCM(n_clusters = c)
-                clm.fit(input_data)
-                labels = clm.predict(input_data)
-                silhouette_coefficient_original = silhouette_score(input_data, labels)
+                clm.fit(dataSetX)
+                labels = clm.predict(dataSetX)
+                silhouette_coefficient_original = silhouette_score(dataSetX, labels)
                 SC_original_data.append(silhouette_coefficient_original)
             bestIndex = np.argmax(SC_original_data)
             bestScore = SC_original_data[bestIndex]
@@ -215,7 +223,7 @@ class Pipeline:
             pickle.dump(gridSearchResults, fp)
     
 # Evaluation on the test data
-    def evaluateModelsPca(self, bestKnnPca,bestLrPca,bestBayesPca, bestFcMeansPca):
+    def evaluateClassificationPca(self, bestKnnPca,bestLrPca,bestBayesPca):
         # Open de search results to load the optimal model parameters
         with open (GridSearchFile, 'rb') as fp:
             searchResults = np.array(pickle.load(fp))
@@ -227,34 +235,26 @@ class Pipeline:
         print("KNN classifier test results:")
         print("  The best model settings for " +str(bestKnnPca)+" PCA components are " + str(bestKnnSettings))
         knn_model = KNeighborsClassifier(n_neighbors = bestKnnSettings['n_neighbors'], weights = bestKnnSettings['weights'], p=bestKnnSettings['p'])
-        self.evaluatePca(knn_model, bestKnnPca)
+        self.evaluateOneClassificationModel(knn_model, bestKnnPca)
 
         bestLrSettings = searchResults[searchResults[:,0]==bestLrPca][0][4]
         print("LR classifier test results:")
         print("  The best model settings for " +str(bestLrPca)+" PCA components are " + str(bestLrSettings))
         lr_model = LogisticRegression(penalty=bestLrSettings['penalty'], max_iter=10000, class_weight='balanced')  
-        self.evaluatePca(lr_model, bestLrPca)
+        self.evaluateOneClassificationModel(lr_model, bestLrPca)
 
         bestBayesSettings = searchResults[searchResults[:,0]==bestLrPca][0][6]
         print("Bayes classifier test results:")
         print("  The best model settings for " +str(bestBayesPca)+" PCA components are " + str(bestBayesSettings))
         bayesModel = GaussianNB()
-        self.evaluatePca(bayesModel, bestBayesPca)
-
-        # bestFcMeanSettings = searchResults[searchResults[:,0]==bestLrPca][0][8]
-        # print("FC-means classifier test results:")
-        # print("  The best model settings for " +str(bestFcMeansPca)+" PCA components are " + str(bestFcMeanSettings))
-        # clm = FCM(n_clusters = bestFcMeanSettings['clusters'])
-        # self.evaluatePca(clm, bestFcMeansPca)
+        self.evaluateOneClassificationModel(bayesModel, bestBayesPca)
        
-    def evaluatePca(self, model, pcaComponents):
+    def evaluateOneClassificationModel(self, model, pcaComponents):
         # Evaluate the model on the test data
         trainX, augmentedTrainX = pipeline.featureExtraction(pcaComponents)
         testX = pipeline.pca.transform(pipeline.testX)
         augmentedTestX = pipeline.pcaAugmented.transform(pipeline.augmentedTestX)
         
-
-
         # Copy the model such that there is an untrained model for augmentation
         modelAugmented = model
         model.fit(trainX, pipeline.trainY)
@@ -299,5 +299,11 @@ if __name__=="__main__":
     bestBayesPca = 8
     bestFcMeansPca = 1
 
-    pipeline.evaluateModelsPca(bestKnnPca,bestLrPca,bestBayesPca, bestFcMeansPca)
+    pipeline.evaluateClassificationPca(bestKnnPca,bestLrPca,bestBayesPca)
     pipeline.evaluateModelsOriginal()
+
+    bestFcMeanSettings = searchResults[searchResults[:,0]==bestLrPca][0][8]
+    print("FC-means classifier test results:")
+    print("  The best model settings for " +str(bestFcMeansPca)+" PCA components are " + str(bestFcMeanSettings))
+    clm = FCM(n_clusters = bestFcMeanSettings['clusters'])
+    self.evaluatePca(clm, bestFcMeansPca)
