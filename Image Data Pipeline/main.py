@@ -10,8 +10,8 @@ def main():
     # Initial settings
 
     data_dir = f"BigCats{os.sep}"
-    IMG_WIDTH = 200
-    IMG_HEIGHT = 200
+    IMG_WIDTH = 50
+    IMG_HEIGHT = 50
     dh = DataHandler()
     dh.loadData(data_dir, IMG_WIDTH, IMG_HEIGHT)
 
