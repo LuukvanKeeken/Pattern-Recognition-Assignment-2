@@ -55,6 +55,7 @@ class Pipeline:
 
 if __name__=="__main__":
     # Read in the credit card data.
+    print("Now reading in and splitting the data ...")
     rawCreditcardDataFile = '../Data/creditcard.csv'
     pipeline = Pipeline(rawCreditcardDataFile)
 
@@ -80,12 +81,14 @@ if __name__=="__main__":
         knn_model = KNeighborsClassifier(n_neighbors=k)
         knn_model.fit(pipeline.X_train_lab, pipeline.y_train_lab)
         acc = knn_model.score(pipeline.X_val, pipeline.y_val)
+        print(f"Validation accuracy: {acc}")
         if (acc > best_knn_model_val_acc):
             best_knn_model_val_acc = acc
             best_knn_model = knn_model
             best_k = k
 
     # Test the best model on the test data, report the metrics, and save the test predictions.
+    print(f"Best K = {best_k} with validation accuracy of {best_knn_model_val_acc}")
     best_knn_model_test_predictions = best_knn_model.predict(pipeline.X_test)
     print(f"Test accuracy of baseline KNN model: {accuracy_score(pipeline.y_test, best_knn_model_test_predictions)}")
     print(f"Test F1-score of baseline KNN model: {f1_score(pipeline.y_test, best_knn_model_test_predictions)}\n\n")
@@ -105,6 +108,7 @@ if __name__=="__main__":
         lp_model = LabelPropagation(kernel = 'knn', n_neighbors = k)
         lp_model.fit(X_lab_and_unlab, y_lab_and_unlab)
         acc = lp_model.score(pipeline.X_val, pipeline.y_val)
+        print(f"Validation accuracy: {acc}")
         if (acc > best_lp_model_val_acc):
                     best_lp_model_val_acc = acc
                     best_lp_model = lp_model
@@ -112,6 +116,7 @@ if __name__=="__main__":
 
     # Test the best model on the test data, report the metrics, and save the test predictions.
     # Also save the predicted labels for the unlabeled data.
+    print(f"Best K = {best_k} with validation accuracy of {best_knn_model_val_acc}")
     predicted_labels = best_lp_model.transduction_[-len(pipeline.y_train_unlab):]
     np.save('./Model Predictions/predicted_labels.npy', predicted_labels)
     best_lp_model_test_predictions = best_lp_model.predict(pipeline.X_test)
@@ -133,12 +138,14 @@ if __name__=="__main__":
         knn_model2 = KNeighborsClassifier()
         knn_model2.fit(X_train_all, y_train_all)
         acc = knn_model2.score(pipeline.X_val, pipeline.y_val)
+        print(f"Validation accuracy: {acc}")
         if (acc > best_knn_model2_val_acc):
             best_knn_model2_val_acc = acc
             best_knn_model2 = knn_model2
             best_k = k
 
     # Test the best model on the test data, report the metrics, and save the test predictions.
+    print(f"Best K = {best_k} with validation accuracy of {best_knn_model_val_acc}")
     best_knn_model2_test_predictions = best_knn_model2.predict(pipeline.X_test)
     print(f"Test accuracy of KNN model trained on more data: {accuracy_score(pipeline.y_test, best_knn_model2_test_predictions)}")
     print(f"Test F1-score of KNN model trained on more data: {f1_score(pipeline.y_test, best_knn_model2_test_predictions)}")
