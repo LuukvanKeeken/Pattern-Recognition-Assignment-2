@@ -1,5 +1,5 @@
 *.csv
 *.jpg
 *.jpeg
-*.npy
 *.png
+rawData.npy
