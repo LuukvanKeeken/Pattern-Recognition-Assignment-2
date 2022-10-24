@@ -58,71 +58,98 @@ def PcaAnalysis():
 
 def featureExtraction(numberOfComponents):
     # TODO: als we dit in het report gebruiken dan iedere data point de kleur van de class geven.
-    pca = PCA(numberOfComponents)
-    reducedDimensionsData = pca.fit_transform(normalizedX)
+    pca = PCA(1)
+    oneDimensionData = pca.fit_transform(normalizedX)
+    pca = PCA(2)
+    twoDimensionData = pca.fit_transform(normalizedX)
+    pca = PCA(3)
+    threeDimensionData = pca.fit_transform(normalizedX)
 
-    if (numberOfComponents <= 3):
-        fig = plt.figure(figsize = (8,8))
-        if numberOfComponents == 3:
-            ax = fig.add_subplot(projection='3d')
-        else:
-            ax = fig.add_subplot()
-            
-        for index, label in enumerate(labelNames):
-            indicesOfClass = labels == index
-            points = reducedDimensionsData[indicesOfClass] 
-            
-            if numberOfComponents == 1:
-                ax.hist(points, alpha=0.5)
-            elif numberOfComponents == 2:
-                ax.scatter(points[0],points[1])
-            else:
-                ax.scatter(points[0],points[1],points[2])
-        plt.xlabel("Principal component 1")
-        plt.ylabel("Principal component 2")
-        plt.title("PCA")
-        plt.savefig(f"Figures{os.sep}GenesVisualization")
+    fig = plt.figure(figsize = (12,3))
+    ax1 = fig.add_subplot(1,3,1)
+    ax2 = fig.add_subplot(1,3,2)
+    ax3 = fig.add_subplot(1,3,3, projection='3d')
 
-def plotGridAccuracy(performances):
+    #     if numberOfComponents == 3:
+    #         ax = fig.add_subplot(projection='3d')
+    #     else:
+    #         
+
+
+    #fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
+    fig.suptitle('Projection of the data set to different PCA components',y=1.05)
+    # ax1.plot(x, y)
+    # ax2.plot(x, -y)
+
+    for index, label in enumerate(labelNames):
+        indicesOfClass = labels == index
+        pointsOne = oneDimensionData[indicesOfClass]
+        pointsTwo = twoDimensionData[indicesOfClass]
+        pointsThree = threeDimensionData[indicesOfClass]
+        ax1.hist(pointsOne, alpha=0.5)
+        ax2.scatter(pointsTwo[0],pointsTwo[1])
+        ax3.scatter(pointsThree[0],pointsThree[1],pointsThree[2],label=str(index))
+    ax1.set(title = "1 component", xlabel='Feature 1')
+    ax2.set(title = "2 components", xlabel='Feature 1', ylabel='Feature 2')
+    ax3.set(title = "3 components", xlabel='Feature 1', ylabel='Feature 2', zlabel='Feature 3')
+    
+    plt.subplots_adjust( wspace=0.3)
+    #plt.legend()
+
+    # pca = PCA(numberOfComponents)
+    # reducedDimensionsData = pca.fit_transform(normalizedX)
+
+    # if (numberOfComponents <= 3):
+    #     fig = plt.figure(figsize = (8,8))
+    #     if numberOfComponents == 3:
+    #         ax = fig.add_subplot(projection='3d')
+    #     else:
+    #         ax = fig.add_subplot()
+            
+    #     for index, label in enumerate(labelNames):
+    #         indicesOfClass = labels == index
+    #         points = reducedDimensionsData[indicesOfClass] 
+            
+    #         if numberOfComponents == 1:
+    #             ax.hist(points, alpha=0.5)
+    #         elif numberOfComponents == 2:
+    #             ax.scatter(points[0],points[1])
+    #         else:
+    #             ax.scatter(points[0],points[1],points[2])
+    #     plt.xlabel("Principal component 1")
+    #     plt.ylabel("Principal component 2")
+    #plt.title("PCA")
+    figureName = f"Figures{os.sep}GenesVisualization"
+    plt.savefig(figureName, dpi = 300, bbox_inches='tight')
+
+def plotClassifiersGridPerformance(performances):
     xAxis = performances[:,0].astype('float64')
     performanceKnn = performances[:,1].astype('float64')
     performanceLr = performances[:,3].astype('float64')
     performanceBayes = performances[:,5].astype('float64')
-    performanceFCMeans = performances[:,7].astype('float64')
 
     fig, ax = plt.subplots(figsize=(12,7))
     ax.plot(xAxis, performanceKnn, label="KNN")
     ax.plot(xAxis, performanceLr, label="LR")
     ax.plot(xAxis, performanceBayes, label="Bayes")
-    ax.plot(xAxis, performanceFCMeans, label="FC-means")
 
     zoomPcaMin = 1
     zoomPcaMax = 15
     knnZoomPerformance = performanceKnn[zoomPcaMin:zoomPcaMax]
     lrZoomPerformance = performanceLr[zoomPcaMin:zoomPcaMax]
     bayesZoomPerformance = performanceBayes[zoomPcaMin:zoomPcaMax]
-    fcMeansZoomPerformance = performanceFCMeans[zoomPcaMin:zoomPcaMax]
-    knnIndexMax = np.argmax(knnZoomPerformance)+zoomPcaMin
-    lrIndexMax = np.argmax(lrZoomPerformance)+zoomPcaMin
-    bayesIndexMax = np.argmax(bayesZoomPerformance)+zoomPcaMin
-    fcMeansIndexMax = np.argmax(fcMeansZoomPerformance)+zoomPcaMin
+
+    knnIndexMax = np.argmax(knnZoomPerformance)+zoomPcaMin+1
+    lrIndexMax = np.argmax(lrZoomPerformance)+zoomPcaMin+1
+    bayesIndexMax = np.argmax(bayesZoomPerformance)+zoomPcaMin+1
 
     axins = ax.inset_axes([0.1, 0.1, 0.8, 0.47])
-    axins.plot(xAxis-1, performanceKnn, label="KNN", color='blue')
+    axins.plot(xAxis, performanceKnn, label="KNN", color='blue')
     axins.plot((knnIndexMax,knnIndexMax), (performanceKnn[knnIndexMax],0),color='blue',linestyle=':')
-    axins.plot(xAxis-1, performanceLr, label="LR", color = 'orange')
+    axins.plot(xAxis, performanceLr, label="LR", color = 'orange')
     axins.plot((lrIndexMax,lrIndexMax), (performanceLr[lrIndexMax],0),color='orange',linestyle=':')
-    axins.plot(xAxis-1, performanceBayes, label="Bayes", color='green')
+    axins.plot(xAxis, performanceBayes, label="Bayes", color='green')
     axins.plot((bayesIndexMax,bayesIndexMax), (performanceBayes[bayesIndexMax],0),color='green',linestyle=':')
-    axins.plot(xAxis-1, performanceFCMeans, label="FC-means")#, color='green')
-    axins.plot((fcMeansIndexMax,fcMeansIndexMax), (performanceFCMeans[fcMeansIndexMax],0),color='green',linestyle=':')
-  
-    #axins.axvline(knnIndexMax)
-    
-    #testX = knnIndexMax
-    #testY = performanceKnn[knnIndexMax]
-    #axins.plot(testX,testY, marker="o", markersize=5, markerfacecolor = "black")
-
 
     # sub region of the original image
     x1, x2, y1, y2 = zoomPcaMin, zoomPcaMax, 0.85, 1.005
@@ -135,20 +162,49 @@ def plotGridAccuracy(performances):
     plt.xlabel("PCA dimensions")
     plt.ylabel("Accuracy")
     plt.xlim((1,170))
-    #plt.legend()
     plt.legend(bbox_to_anchor=(0.85,0.78))
-    plt.title("Best model accuracies with PCA components")
+    plt.title("Classifiers performance for different PCA components")
     figureName =f"Figures{os.sep}GenesClassifiersGridSearch" 
     plt.savefig(figureName, dpi = 300, bbox_inches='tight')
 
+def plotClusterGridPerformance(performances):
+    xAxis = performances[:,0].astype('float64')
+    performanceFCMeans = performances[:,7].astype('float64')
+
+    fig, ax = plt.subplots(figsize=(12,7))
+    ax.plot(xAxis, performanceFCMeans, label="FC-means")
+
+    zoomPcaMin = 1
+    zoomPcaMax = 18
+    #fcMeansZoomPerformance = performanceFCMeans[zoomPcaMin:zoomPcaMax]
+    #fcMeansIndexMax = np.argmax(fcMeansZoomPerformance)+zoomPcaMin
+
+    axins = ax.inset_axes([0.15, 0.45, 0.8, 0.47])
+    axins.plot(xAxis, performanceFCMeans, label="FC-means")
+    #axins.plot((fcMeansIndexMax,fcMeansIndexMax), (performanceFCMeans[fcMeansIndexMax],0),color='red',linestyle=':')
+
+    # sub region of the original image
+    x1, x2, y1, y2 = zoomPcaMin, zoomPcaMax, 0.1, 0.85
+    axins.set_xlim(x1, x2)
+    axins.xaxis.set_major_locator(MaxNLocator(integer=True))
+    axins.xaxis.set_ticks(range(zoomPcaMin,zoomPcaMax+1,1))
+    axins.set_ylim(y1, y2)
+    ax.indicate_inset_zoom(axins, edgecolor="black")
+
+    plt.xlabel("PCA dimensions")
+    plt.ylabel("Silhouette Coefficient")
+    plt.xlim((1,170))
+    plt.title("Cluster performance for different PCA components")
+    figureName =f"Figures{os.sep}GenesClusterGridSearch" 
+    plt.savefig(figureName, dpi = 300, bbox_inches='tight')
 
 if __name__=="__main__":
     # File locations
     rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
     labelsFile = './Gene Data Pipeline/Data/labels.npy'
     labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
-    #GridSearchClassifiersFile = './Gene Data Pipeline/Data/ClassifiersGridSearch.npy'
     GridSearchFile = './Gene Data Pipeline/Data/GridSearch.npy'
+    #GridSearchFile = './Gene Data Pipeline/Data/GridSearchWrongClusterData.npy'
 
     # Load data
     rawData = np.load(rawDataFile)
@@ -171,4 +227,5 @@ if __name__=="__main__":
     results=results[results[:,0].argsort()]
     if results[len(results)-1][0]>10000:
         results = np.delete(results, len(results)-1, axis=0)
-    plotGridAccuracy(results)
+    plotClassifiersGridPerformance(results)
+    plotClusterGridPerformance(results)
