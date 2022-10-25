@@ -196,8 +196,8 @@ class SIFT:
         #     cv2.waitKey(0) 
         keypoints = self.findScaleSpaceExtrema(gaussian_images, dog_images, num_intervals, sigma, image_border_width)
         keypoints.sort(key=lambda x: x.response, reverse=True)
-        keypoints = keypoints[0:10]
         keypoints = self.removeDuplicateKeypoints(keypoints)
+        keypoints = keypoints[0:10]
         keypoints = self.convertKeypointsToInputImageSize(keypoints)
 
         descriptors = self.generateDescriptors(keypoints, gaussian_images)
