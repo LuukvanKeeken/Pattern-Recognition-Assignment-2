@@ -14,7 +14,7 @@ import pickle
 
 
 def build_vocab(descriptors):
-    return KMeans(n_clusters=200, random_state=0).fit(descriptors) 
+    return KMeans(n_clusters=5, random_state=0).fit(descriptors) 
 
 def build_histograms(descriptors, y, vocab, filename = "histograms.npy"):
     histograms = []
@@ -50,23 +50,23 @@ def main():
     images, dh.class_labels, test_size=0.2, shuffle=True, random_state=0
     )
 
-    sift = SIFT()
-    descriptors_train = np.load("descriptor.npy")
-    descriptors_test = np.load("descriptors_test.npy")
-    # descriptors_train = []    
-    # descriptors_test = []    
-    # for i, img in enumerate(X_train):
-    #         print(f"{i}/{len(X_train)}")
-    #         keypoints, descriptor = sift.computeKeypointsAndDescriptors(img)
-    #         descriptors_train.append(descriptor)
-    # np.save("descriptors_train.npy", [el for i in descriptors_train for el in i])   
+    sift = cv2.SIFT_create()
 
-    # for i, img in enumerate(X_test):
-    #         print(f"{i}/{len(X_test)}")
-    #         keypoints, descriptor = sift.computeKeypointsAndDescriptors(img)
-    #         descriptors_test.append(descriptor)
-    # np.save("descriptors_test.npy", [el for i in descriptors_test for el in i])   
-
+    # descriptors_train = np.load("descriptors_train.npy")
+    # descriptors_test = np.load("descriptors_test.npy")
+    descriptors_train = []    
+    descriptors_test = []    
+    for i, img in enumerate(X_train):
+            print(f"{i}/{len(X_train)}")
+            keypoints, descriptor = sift.detectAndCompute(img, None)
+            descriptors_train.append(descriptor)
+    np.save("descriptors_train.npy", [el for i in descriptors_train for el in i])   
+    for i, img in enumerate(X_test):
+            print(f"{i}/{len(X_test)}")
+            keypoints, descriptor = sift.detectAndCompute(img, None)
+            descriptors_test.append(descriptor)
+    np.save("descriptors_test.npy", [el for i in descriptors_test for el in i])   
+    print(descriptors_train)
     vocab = build_vocab(descriptors_train)
 
     train_histograms = build_histograms(descriptors_train, y_train, vocab)

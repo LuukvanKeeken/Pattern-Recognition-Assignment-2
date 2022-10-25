@@ -19,7 +19,10 @@ class DataHandler:
         
                 image_path= os.path.join(img_folder, class_label,  file)
                 image= cv2.imread(image_path)
+                
+                image = self.convert_to_greyscale(image) 
                 image=cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH),interpolation = cv2.INTER_AREA) # resize images to make it uniform
+                #image = cv2.resize(image, (int(image.shape[1] * 0.1), int(image.shape[0] * 0.1)), interpolation = cv2.INTER_AREA)
                 # image=np.array(image)
                 # image = image.astype('float32')
                 # image /= 255 # scale down images from 0-255 to 0-1 for better convergence (doesnt work with sift)
@@ -95,7 +98,6 @@ class DataHandler:
         
         #images = np.array(images)
         self.img_data = images.reshape((len(self.img_data), -1))
-        images = np.array([self.convert_to_greyscale(image) for image in images])
         # salt_and_pepper_images = np.array([self.apply_salt_and_pepper_noise(image, 0.5) for image in images])
         return images
     
