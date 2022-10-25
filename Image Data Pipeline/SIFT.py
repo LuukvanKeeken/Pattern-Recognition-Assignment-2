@@ -5,7 +5,6 @@ from functools import cmp_to_key
 import logging
 import cv2
 import matplotlib.pyplot as plt
-
 class SIFT:
     def __init__(self):
         pass
@@ -196,10 +195,20 @@ class SIFT:
         #     cv2.waitKey(0) 
         keypoints = self.findScaleSpaceExtrema(gaussian_images, dog_images, num_intervals, sigma, image_border_width)
         keypoints.sort(key=lambda x: x.response, reverse=True)
-        keypoints = keypoints[0:10]
+        print([keypoint.response for keypoint in keypoints])
         keypoints = self.removeDuplicateKeypoints(keypoints)
+        keypoints = keypoints[0:10]
         keypoints = self.convertKeypointsToInputImageSize(keypoints)
+        for kp in keypoints:
+            x, y = kp.pt  # Each keypoint as an x, y tuple  https://stackoverflow.com/questions/35884409/how-to-extract-x-y-coordinates-from-opencv-cv2-keypoint-object
 
+            x = int(round(x))  # Round an cast to int
+            y = int(round(y))
+
+            # Draw a cross with (x, y) center
+            base_image = cv2.drawMarker(base_image, (x, y), (0,255,0), markerType=cv2.MARKER_CROSS, markerSize=5, thickness=1, line_type=cv2.LINE_8)
+        cv2.imshow("Base image", base_image)
+        cv2.waitKey(0) 
         descriptors = self.generateDescriptors(keypoints, gaussian_images)
         return keypoints, descriptors
 

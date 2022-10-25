@@ -15,7 +15,7 @@ from sklearn.metrics import silhouette_score
 from sklearn.base import clone
 import pandas as pd
 
-# File locations
+# Data set locations
 dataFileName = './Data/Genes/data.csv'
 labelsFileName = './Data/Genes/labels.csv'
 
@@ -23,7 +23,8 @@ labelsFileName = './Data/Genes/labels.csv'
 rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
 labelsFile = './Gene Data Pipeline/Data/labels.npy'
 labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
-GridSearchFile = './Gene Data Pipeline/Data/GridSearch.npy'
+GridSearchResultsFile = './Gene Data Pipeline/Data/GridSearch.npy'
+evaluationResultsFile = './Gene Data Pipeline/Data/EvaluationResults.npy'
 
 LoadDataset = False
 
@@ -83,7 +84,7 @@ class Pipeline:
 
         # Augment the training data
         samplerPerClass = 273
-        oversample = SMOTE(sampling_strategy = {0:samplerPerClass, 1:samplerPerClass, 2:samplerPerClass, 3:samplerPerClass, 4:samplerPerClass})
+        oversample = SMOTE(sampling_strategy = {0:samplerPerClass, 1:samplerPerClass, 2:samplerPerClass, 3:samplerPerClass, 4:samplerPerClass}, random_state=27)
         augmentedTrainX, self.augmentedTrainY = oversample.fit_resample(self.rawTrainX, self.trainY)
         augmentedMean = np.mean(augmentedTrainX, axis=0) 
         augmentedCenteredData = augmentedTrainX - augmentedMean
@@ -126,8 +127,8 @@ class Pipeline:
 # Grid search on training data. Both original and augmented 
     def gridSearch(self, pcaComponentSearch):
         # If a grid search already is performed, load the file to only search new components
-        if path.exists(GridSearchFile):
-            with open (GridSearchFile, 'rb') as fp:
+        if path.exists(GridSearchResultsFile):
+            with open (GridSearchResultsFile, 'rb') as fp:
                 gridSearchResults = np.array(pickle.load(fp))
                 # check which parameters already exist and append new parameters
             searchRange = []
@@ -215,61 +216,68 @@ class Pipeline:
         else:
             gridSearchResults = np.append(gridSearchResults,newResults, axis=0)
         
-        with open(GridSearchFile, 'wb') as fp:
+        with open(GridSearchResultsFile, 'wb') as fp:
             pickle.dump(gridSearchResults, fp)
     
 # Evaluation on the test data
     def evaluateModels(self, bestKnnPca,bestLrPca,bestBayesPca, bestFcMeansPca):
         # Open de search results to load the optimal model parameters
-        with open (GridSearchFile, 'rb') as fp:
+        with open (GridSearchResultsFile, 'rb') as fp:
             searchResults = np.array(pickle.load(fp))
 
         # Evaluate models on the best-reduced data
-        print("Evaluating models on best-reduced data set")
+        print("Evaluating models on best-reduced data set...")
 
+        knnValidationAcc = searchResults[searchResults[:,0]==bestKnnPca][0][1] 
         bestKnnSettings = searchResults[searchResults[:,0]==bestKnnPca][0][2]
-        knnPcaResults = ["knn", bestKnnPca, bestKnnSettings]
+        knnPcaResults = ["knn", bestKnnPca, bestKnnSettings, knnValidationAcc]
         knn_model = KNeighborsClassifier(n_neighbors = bestKnnSettings['n_neighbors'], weights = bestKnnSettings['weights'], p=bestKnnSettings['p'])
         knnPcaResults.extend(self.evaluateClassificationBestReduced(knn_model, bestKnnPca))
     
+        lrValidationAcc = searchResults[searchResults[:,0]==bestLrPca][0][3] 
         bestLrSettings = searchResults[searchResults[:,0]==bestLrPca][0][4]
-        lrPcaResults = ["lr", bestLrPca, bestLrSettings]
+        lrPcaResults = ["lr", bestLrPca, bestLrSettings, lrValidationAcc]
         lr_model = LogisticRegression(penalty=bestLrSettings['penalty'], max_iter=10000, class_weight='balanced')  
         lrPcaResults.extend(self.evaluateClassificationBestReduced(lr_model, bestLrPca))
         
+        bayesValidationAcc = searchResults[searchResults[:,0]==bestBayesPca][0][5] 
         bestBayesSettings = searchResults[searchResults[:,0]==bestBayesPca][0][6]
-        BayesPcaResults = ["Bayes",bestBayesPca,bestBayesSettings]
+        BayesPcaResults = ["Bayes",bestBayesPca,bestBayesSettings, bayesValidationAcc]
         bayesModel = GaussianNB()
         BayesPcaResults.extend(self.evaluateClassificationBestReduced(bayesModel, bestBayesPca))
 
         bestFcMeanSettings = searchResults[searchResults[:,0]==bestFcMeansPca][0][8]
-        FcPcaResults = ["FC-means",bestFcMeansPca,bestFcMeanSettings, searchResults[searchResults[:,0]==bestFcMeansPca][0][7], 0,0,0]
+        FcPcaResults = ["FC-means",bestFcMeansPca,bestFcMeanSettings, 0, searchResults[searchResults[:,0]==bestFcMeansPca][0][7], 0,0,0]
 
         # Evaluate all models on the original data
-        print()
-        print("Evaluating models on the original data set")
+        print("Evaluating models on the original data set...")
         lastRow = searchResults[len(searchResults[:,0])-1]
         
+        knnValidationAcc = lastRow[1]
         bestKnnSettings = lastRow[2]
-        knnResults = ["knn", len(self.trainX[0]), bestKnnSettings]
+        knnResults = ["knn", len(self.trainX[0]), bestKnnSettings,knnValidationAcc]
         knn_model = KNeighborsClassifier(n_neighbors = bestKnnSettings['n_neighbors'], weights = bestKnnSettings['weights'], p=bestKnnSettings['p'])
         knnResults.extend(self.evaluateClassificationOriginal(knn_model))
 
+        lrValidationAcc = lastRow[3]
         bestLrSettings = lastRow[4]
-        lrResults = ["lr", len(self.trainX[0]), bestLrSettings]
+        lrResults = ["lr", len(self.trainX[0]), bestLrSettings,lrValidationAcc]
         lr_model = LogisticRegression(penalty=bestLrSettings['penalty'], max_iter=10000, class_weight='balanced')  
         lrResults.extend(self.evaluateClassificationOriginal(lr_model))
 
+        bayesValidationAcc = lastRow[5]
         bestBayesSettings = lastRow[6]
-        BayesResults = ["Bayes",len(self.trainX[0]),bestBayesSettings]
+        BayesResults = ["Bayes",len(self.trainX[0]),bestBayesSettings,bayesValidationAcc]
         bayesModel = GaussianNB()
         BayesResults.extend(self.evaluateClassificationOriginal(bayesModel))
 
         bestFcMeanSettings = lastRow[8]
-        FcResults = ["FC-means",len(self.trainX[0]),bestFcMeanSettings,lastRow[7], 0,0,0]
+        FcResults = ["FC-means",len(self.trainX[0]),bestFcMeanSettings,0,lastRow[7], 0,0,0]
 
         # ModelName, Components, best settings, standardAccuracy, standardPredictions, augmentationAccuracy, augmentationPredictions
         evaluationResults = [knnPcaResults, lrPcaResults, BayesPcaResults, FcPcaResults, knnResults, lrResults, BayesResults, FcResults]
+        with open(evaluationResultsFile, 'wb') as fp:
+            pickle.dump(evaluationResults, fp)
         return evaluationResults
              
     def evaluateClassificationBestReduced(self, model, pcaComponents):
@@ -353,7 +361,7 @@ if __name__=="__main__":
     evaluationResults = pipeline.evaluateModels(bestKnnPca,bestLrPca,bestBayesPca, bestFcMeansPca)
 
     # Mask the predictions in the array to plot the results table.
-    simpleResults = np.array(evaluationResults)[:,[True,True,True,True,False,True,False]]
-    df = pd.DataFrame(simpleResults, columns = ['Model','Dimensions','Best settings', 'standard perf.', 'augmentation perf.'])
+    simpleResults = np.array(evaluationResults)[:,[True,True,True,True, True,False,True,False]]
+    df = pd.DataFrame(simpleResults, columns = ['Model','Dimensions','Best settings', 'val. performance' ,'standard perf.', 'augmentation perf.'])
     print()
     print(df)

@@ -4,6 +4,7 @@ import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
+from sklearn.metrics import confusion_matrix
 
 def dataSetSummary():
     # count number of samples per class
@@ -176,12 +177,9 @@ def plotClusterGridPerformance(performances):
 
     zoomPcaMin = 1
     zoomPcaMax = 18
-    #fcMeansZoomPerformance = performanceFCMeans[zoomPcaMin:zoomPcaMax]
-    #fcMeansIndexMax = np.argmax(fcMeansZoomPerformance)+zoomPcaMin
 
     axins = ax.inset_axes([0.15, 0.45, 0.8, 0.47])
     axins.plot(xAxis, performanceFCMeans, label="FC-means")
-    #axins.plot((fcMeansIndexMax,fcMeansIndexMax), (performanceFCMeans[fcMeansIndexMax],0),color='red',linestyle=':')
 
     # sub region of the original image
     x1, x2, y1, y2 = zoomPcaMin, zoomPcaMax, 0.1, 0.85
@@ -198,13 +196,56 @@ def plotClusterGridPerformance(performances):
     figureName =f"Figures{os.sep}GenesClusterGridSearch" 
     plt.savefig(figureName, dpi = 300, bbox_inches='tight')
 
+def plotConfusionMatrix(name, dimensions, augmented, predictions):
+    title = "Confusion matrix model " + name
+    fileName = "GenesConfusionMatrix"+name
+
+    if augmented:
+        title += " on the augmented"
+        fileName += "Augmented"
+    else:
+        title += " on the default"
+        fileName += "Default"
+
+    if dimensions < 200:
+        title += " best-reduced data set"
+        fileName += "Pca"
+    else:
+        title += " original data set"
+        fileName += "Original"
+
+    confusionMatrix = confusion_matrix(predictions[:,0],predictions[:,1])
+
+    fig, ax = plt.subplots(figsize=(7.5, 7.5))
+    ax.matshow(confusionMatrix, cmap=plt.cm.Blues, alpha=0.3)
+    for i in range(confusionMatrix.shape[0]):
+        for j in range(confusionMatrix.shape[1]):
+            ax.text(x=j, y=i,s=confusionMatrix[i, j], va='center', ha='center', size='xx-large')
+    plt.xticks([0,1,2,3,4],labelNames)
+    plt.yticks([0,1,2,3,4],labelNames)
+    
+    plt.xlabel('Predictions')
+    plt.ylabel('Actuals')
+    plt.title(title,y=1.05)
+    figureName =f"Figures{os.sep}"+fileName
+    plt.savefig(figureName, dpi = 300, bbox_inches='tight')
+
+def plotEvaluationResults(evaluationResults):
+    for result in evaluationResults:
+        [name, dimensions, _, _, _, standardPredictions, _, augmentedPredictions]=result
+        # predictions is [yTrue, yPredicted]
+        if name != "FC-means":
+            plotConfusionMatrix(name, dimensions, False, standardPredictions)
+            plotConfusionMatrix(name, dimensions, True, augmentedPredictions)
+
+
 if __name__=="__main__":
     # File locations
     rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
     labelsFile = './Gene Data Pipeline/Data/labels.npy'
     labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
     GridSearchFile = './Gene Data Pipeline/Data/GridSearch.npy'
-    #GridSearchFile = './Gene Data Pipeline/Data/GridSearchWrongClusterData.npy'
+    evaluationResultsFile = './Gene Data Pipeline/Data/EvaluationResults.npy'
 
     # Load data
     rawData = np.load(rawDataFile)
@@ -229,3 +270,8 @@ if __name__=="__main__":
         results = np.delete(results, len(results)-1, axis=0)
     plotClassifiersGridPerformance(results)
     plotClusterGridPerformance(results)
+
+    with open (evaluationResultsFile, 'rb') as fp:
+        evaluationResults = np.array(pickle.load(fp))  
+    
+    plotEvaluationResults(evaluationResults)
