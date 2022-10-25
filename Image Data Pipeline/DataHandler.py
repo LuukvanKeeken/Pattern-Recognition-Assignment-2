@@ -20,15 +20,9 @@ class DataHandler:
                 image_path= os.path.join(img_folder, class_label,  file)
                 image= cv2.imread(image_path)
                 image=cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH),interpolation = cv2.INTER_AREA) # resize images to make it uniform
-<<<<<<< HEAD
-                image=np.array(image)
-                image = image.astype('float32')
-                #image /= 255 # scale down images from 0-255 to 0-1 for better convergence (doesnt work with sift)
-=======
                 # image=np.array(image)
                 # image = image.astype('float32')
                 # image /= 255 # scale down images from 0-255 to 0-1 for better convergence (doesnt work with sift)
->>>>>>> eeada071f9e4c44eb9951d7c28abc725ba51e80b
 
                 self.img_data.append(image)
                 self.class_labels.append(class_label)

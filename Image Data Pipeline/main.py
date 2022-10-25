@@ -26,6 +26,7 @@ def build_vocab(images):
     # np.save("descriptor", descriptors)
     # file = open("descriptor.pkl",'r', encoding='utf-8')
     vocab = KMeans(n_clusters=200, random_state=0).fit(descriptors)
+    print(vocab)
     np.save("vocab", vocab)
     return vocab
 
@@ -34,8 +35,8 @@ def main():
     # Initial settings
 
     data_dir = f"BigCats{os.sep}"
-    IMG_WIDTH = 50
-    IMG_HEIGHT = 50
+    IMG_WIDTH = 40
+    IMG_HEIGHT = 40
     dh = DataHandler()
     dh.loadData(data_dir, IMG_WIDTH, IMG_HEIGHT)
 
