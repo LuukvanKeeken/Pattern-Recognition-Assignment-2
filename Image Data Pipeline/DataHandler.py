@@ -21,7 +21,7 @@ class DataHandler:
                 image= cv2.imread(image_path)
                 
                 image = self.convert_to_greyscale(image) 
-                image=cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH),interpolation = cv2.INTER_AREA) # resize images to make it uniform
+                #image=cv2.resize(image, (IMG_HEIGHT, IMG_WIDTH),interpolation = cv2.INTER_AREA) # resize images to make it uniform
                 #image = cv2.resize(image, (int(image.shape[1] * 0.1), int(image.shape[0] * 0.1)), interpolation = cv2.INTER_AREA)
                 # image=np.array(image)
                 # image = image.astype('float32')

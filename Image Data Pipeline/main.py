@@ -19,7 +19,7 @@ def build_vocab(descriptors):
 def build_histograms(descriptors, y, vocab, filename = "histograms.npy"):
     histograms = []
     # Reshape back into per image
-    descriptors = descriptors.reshape((len(y),10,128))
+    descriptors = descriptors.reshape((len(y),100,128))
     for descriptors_img, label in zip(descriptors,y):
         distances = cdist(descriptors_img, vocab.cluster_centers_)
         bin_numbers = np.argmin(distances, axis=1)
@@ -27,6 +27,7 @@ def build_histograms(descriptors, y, vocab, filename = "histograms.npy"):
         for bin_number in bin_numbers:
             histogram[0][bin_number] += 1  
         histograms.append(histogram)
+        print(histogram)
     np.save(filename,histograms)
     return histograms
 
@@ -59,13 +60,15 @@ def main():
     for i, img in enumerate(X_train):
             print(f"{i}/{len(X_train)}")
             keypoints, descriptor = sift.detectAndCompute(img, None)
-            descriptors_train.append(descriptor)
-    np.save("descriptors_train.npy", [el for i in descriptors_train for el in i])   
+            descriptors_train.append(descriptor[0:100])
+    descriptors_train = np.array([el for i in descriptors_train for el in i])
+    np.save("descriptors_train.npy", descriptors_train)   
     for i, img in enumerate(X_test):
             print(f"{i}/{len(X_test)}")
             keypoints, descriptor = sift.detectAndCompute(img, None)
-            descriptors_test.append(descriptor)
-    np.save("descriptors_test.npy", [el for i in descriptors_test for el in i])   
+            descriptors_test.append(descriptor[0:100])
+    descriptors_test = np.array([el for i in descriptors_test for el in i])
+    np.save("descriptors_test.npy", descriptors_test)   
     print(descriptors_train)
     vocab = build_vocab(descriptors_train)
 
