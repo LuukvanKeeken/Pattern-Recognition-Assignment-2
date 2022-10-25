@@ -20,7 +20,7 @@ class Pipeline:
             line_count = 0
             for row in csv_reader:
                 if (line_count > 0):
-                    data.append(row[0:-1])
+                    data.append(row[1:-2])
                     labels.append(row[-1])
                 line_count += 1
 
@@ -71,28 +71,28 @@ if __name__=="__main__":
     min_k = 1
     max_k = 9
 
-    # # Perform cross-validation to select the best number of neighbors K for the baseline KNN model
-    # print("Now training and testing the baseline KNN model ...")
-    # best_knn_model = None
-    # best_knn_model_val_acc = -1
-    # best_k = -1
-    # for k in range(min_k, max_k+1, 2):
-    #     print(f"Cross-validating k = {k} ...")
-    #     knn_model = KNeighborsClassifier(n_neighbors=k)
-    #     knn_model.fit(pipeline.X_train_lab, pipeline.y_train_lab)
-    #     acc = knn_model.score(pipeline.X_val, pipeline.y_val)
-    #     print(f"Validation accuracy: {acc}")
-    #     if (acc > best_knn_model_val_acc):
-    #         best_knn_model_val_acc = acc
-    #         best_knn_model = knn_model
-    #         best_k = k
+    # Perform cross-validation to select the best number of neighbors K for the baseline KNN model
+    print("Now training and testing the baseline KNN model ...")
+    best_knn_model = None
+    best_knn_model_val_acc = -1
+    best_k = -1
+    for k in range(min_k, max_k+1, 2):
+        print(f"Cross-validating k = {k} ...")
+        knn_model = KNeighborsClassifier(n_neighbors=k)
+        knn_model.fit(pipeline.X_train_lab, pipeline.y_train_lab)
+        acc = knn_model.score(pipeline.X_val, pipeline.y_val)
+        print(f"Validation accuracy: {acc}")
+        if (acc > best_knn_model_val_acc):
+            best_knn_model_val_acc = acc
+            best_knn_model = knn_model
+            best_k = k
 
     # # Test the best model on the test data, report the metrics, and save the test predictions.
-    # print(f"Best K = {best_k} with validation accuracy of {best_knn_model_val_acc}")
-    # best_knn_model_test_predictions = best_knn_model.predict(pipeline.X_test)
-    # print(f"Test accuracy of baseline KNN model: {accuracy_score(pipeline.y_test, best_knn_model_test_predictions)}")
-    # print(f"Test F1-score of baseline KNN model: {f1_score(pipeline.y_test, best_knn_model_test_predictions)}\n\n")
-    # np.save('./Model Predictions/knn_model_test_predictions.npy', best_knn_model_test_predictions)
+    print(f"Best K = {best_k} with validation accuracy of {best_knn_model_val_acc}")
+    best_knn_model_test_predictions = best_knn_model.predict(pipeline.X_test)
+    print(f"Test accuracy of baseline KNN model: {accuracy_score(pipeline.y_test, best_knn_model_test_predictions)}")
+    print(f"Test F1-score of baseline KNN model: {f1_score(pipeline.y_test, best_knn_model_test_predictions)}\n\n")
+    np.save('./Model Predictions/knn_model_test_predictions.npy', best_knn_model_test_predictions)
 
 
 
