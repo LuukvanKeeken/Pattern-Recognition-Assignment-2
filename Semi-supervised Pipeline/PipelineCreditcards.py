@@ -22,6 +22,9 @@ class Pipeline:
     def __init__(self, fileName):
         self.data, self.labels = self.readData(fileName)
 
+    # Calculate means and standard deviations of accuracies and F1-scores.
+    # Also plot the accuracies over the iterations and create confusion
+    # matrices for the last iteration.
     def analyseData(self, knn1_accs, knn1_f1s, lp_accs, lp_f1s, knn2_accs, knn2_f1s, knn_model_test_predictions, lp_model_test_predictions, knn_model_2_test_predictions):
         knn1_avg_acc = np.mean(knn1_accs)
         knn1_stddev_acc = np.std(knn1_accs)
@@ -138,9 +141,9 @@ if __name__=="__main__":
     # The accuracies and F1-scores are saved to file each round,
     # in order to not lose collected data when the script stops
     # for some reason.
-    number_of_rounds = 1
+    number_of_rounds = 100
     for i in range(number_of_rounds):
-        print(f"Round {i+1}")
+        print(f"Round {i+1} out of {number_of_rounds}")
         
         
         # Split the data into 80% training and 20% testing data.
