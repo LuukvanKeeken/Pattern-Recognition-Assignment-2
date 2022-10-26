@@ -14,7 +14,6 @@ class GridSearch:
         self.CVresults = {}
         self.knn_results = {}
         self.svm_results = {}
-        self.dt_results = {}
         self.rf_results = {}
 
     def gridSearch(self, classifier):
@@ -86,7 +85,7 @@ class GridSearch:
         plt.legend(fontsize = 12)
         plt.xticks(X)
         plt.grid()
-
+        plt.savefig("Figures/RandomForest_{}.png".format(eval_metric))
         plt.show()
 
 
@@ -112,7 +111,7 @@ class GridSearch:
         plt.legend(fontsize = 12)
         plt.xticks(X)
         plt.grid()
-
+        plt.savefig("Figures/KNN_{}.png".format(eval_metric))
         plt.show()
 
 
@@ -137,6 +136,7 @@ class GridSearch:
         plt.legend(fontsize = 12)
         plt.xticks(X)
         plt.grid()
+        plt.savefig("Figures/SVM_{}.png".format(eval_metric))
 
         plt.show()
 
