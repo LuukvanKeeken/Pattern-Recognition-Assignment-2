@@ -12,10 +12,16 @@ import os
 import numpy as np
 import pickle
 from sklearn.preprocessing import normalize
+import matplotlib.pyplot as plt
 
 
 def build_vocab(descriptors):
-    return KMeans(n_clusters=10, random_state=0).fit(descriptors) 
+    k_means = KMeans(n_clusters=10, random_state=0).fit(descriptors) 
+    # print(k_means[0])
+    # plt.scatter(k_means[:,0] , k_means[:,1] , color = 'red')
+    # plt.scatter(k_means[:,0] , k_means[:,1] , color = 'black')
+    # plt.show()
+    return k_means
 
 def build_histograms(descriptors, y, N_KEYPOINTS, vocab, filename = "histograms.npy"):
     histograms = []
