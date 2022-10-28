@@ -72,16 +72,7 @@ def featureExtraction(numberOfComponents):
     ax2 = fig.add_subplot(1,3,2)
     ax3 = fig.add_subplot(1,3,3, projection='3d')
 
-    #     if numberOfComponents == 3:
-    #         ax = fig.add_subplot(projection='3d')
-    #     else:
-    #         
-
-
-    #fig, (ax1, ax2, ax3) = plt.subplots(1, 3)
     fig.suptitle('Projection of the data set to different PCA components',y=1.05)
-    # ax1.plot(x, y)
-    # ax2.plot(x, -y)
 
     for index, label in enumerate(labelNames):
         indicesOfClass = labels == index
@@ -96,31 +87,7 @@ def featureExtraction(numberOfComponents):
     ax3.set(title = "3 components", xlabel='Feature 1', ylabel='Feature 2', zlabel='Feature 3')
     
     plt.subplots_adjust( wspace=0.3)
-    #plt.legend()
 
-    # pca = PCA(numberOfComponents)
-    # reducedDimensionsData = pca.fit_transform(normalizedX)
-
-    # if (numberOfComponents <= 3):
-    #     fig = plt.figure(figsize = (8,8))
-    #     if numberOfComponents == 3:
-    #         ax = fig.add_subplot(projection='3d')
-    #     else:
-    #         ax = fig.add_subplot()
-            
-    #     for index, label in enumerate(labelNames):
-    #         indicesOfClass = labels == index
-    #         points = reducedDimensionsData[indicesOfClass] 
-            
-    #         if numberOfComponents == 1:
-    #             ax.hist(points, alpha=0.5)
-    #         elif numberOfComponents == 2:
-    #             ax.scatter(points[0],points[1])
-    #         else:
-    #             ax.scatter(points[0],points[1],points[2])
-    #     plt.xlabel("Principal component 1")
-    #     plt.ylabel("Principal component 2")
-    #plt.title("PCA")
     figureName = f"Figures{os.sep}GenesVisualization"
     plt.savefig(figureName, dpi = 300, bbox_inches='tight')
 
@@ -198,29 +165,27 @@ def plotClusterGridPerformance(performances):
     plt.savefig(figureName, dpi = 300, bbox_inches='tight')
 
 def plotConfusionMatrix(name, dimensions, augmented, predictions):
-    title = "Confusion matrix model " + name
+    title = "Confusion matrix " + name
     fileName = "GenesConfusionMatrix"+name
 
     if augmented:
         title += " on the augmented"
         fileName += "Augmented"
     else:
-        title += " on the default"
+        title += " on the original"
         fileName += "Default"
 
     if dimensions < 200:
-        title += " best-reduced data set"
+        title += " reduced data set"
         fileName += "Pca"
     else:
-        title += " original data set"
+        title += " unreduced data set"
         fileName += "Original"
 
     confusionMatrix = confusion_matrix(predictions[:,0],predictions[:,1])
-    #print(title + " Precision: "+str(round(precision_score(predictions[:,0],predictions[:,1], average='weighted'),3)))
-    #print(title + " Recall: "+str(round(recall_score(predictions[:,0],predictions[:,1], average='weighted'),3)))
     print(title + " F1 Score: "+str(round(f1_score(predictions[:,0],predictions[:,1], average='weighted'),3)))
 
-    fig, ax = plt.subplots(figsize=(7.5, 7.5))
+    fig, ax = plt.subplots(figsize=(6, 6))
     ax.matshow(confusionMatrix, cmap=plt.cm.Blues, alpha=0.3)
     for i in range(confusionMatrix.shape[0]):
         for j in range(confusionMatrix.shape[1]):
@@ -230,7 +195,7 @@ def plotConfusionMatrix(name, dimensions, augmented, predictions):
     
     plt.xlabel('Predictions')
     plt.ylabel('Actuals')
-    plt.title(title,y=1.05)
+    plt.title(title,y=1.07)
     figureName =f"Figures{os.sep}"+fileName
     plt.savefig(figureName, dpi = 300, bbox_inches='tight')
 
