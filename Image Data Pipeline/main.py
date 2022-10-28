@@ -41,11 +41,9 @@ def build_histograms(descriptors, y, N_KEYPOINTS, vocab, filename = "histograms.
 def main():
     # Initial settings
     data_dir = f"BigCats{os.sep}"
-    IMG_WIDTH = 50
-    IMG_HEIGHT = 50
     N_KEYPOINTS = 10
     dh = DataHandler()
-    dh.loadData(data_dir, IMG_WIDTH, IMG_HEIGHT)
+    dh.loadData(data_dir)
 
     dh.showClassDistribution()
     dh.showExampleImages()
@@ -58,6 +56,9 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(
     images, dh.class_labels, test_size=0.2, shuffle=True, random_state=0
     )
+    sift = SIFT()
+    for img in X_train:
+        keypoints, descriptor = sift.computeKeypointsAndDescriptors(img)
 
     sift = cv2.SIFT_create()
 

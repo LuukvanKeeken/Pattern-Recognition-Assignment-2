@@ -186,13 +186,49 @@ class SIFT:
         gaussian_kernels = self.generateGaussianKernels(sigma, num_intervals)
         print(f"gaussian kernels: {gaussian_kernels}")
         gaussian_images = self.generateGaussianImages(base_image, num_octaves, gaussian_kernels)
-        # for image in gaussian_images[0]:
-        #     cv2.imshow("Gaussian image", image)
-        #     cv2.waitKey(0) 
+        fig = plt.figure(figsize=(20, 20))
+        plt.tight_layout()
+        count = 1
+        print(len(gaussian_images[0]))
+        for idx in range(len(gaussian_images)):
+            for i, images in enumerate(gaussian_images):
+                if count == 55:
+                    count -=1
+                ax = plt.subplot(len(gaussian_images[0]), len(gaussian_images), count)
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                if idx == 0:
+                    ax.set_title(f"Octave {i+1}")
+                ax.axis('off')   
+                ax.set_aspect('equal')
+                if count == len(gaussian_images.flatten()):
+                    print("gottem")
+                else:
+                    plt.imshow(gaussian_images[i][idx])
+                count +=1
+        plt.show()
+        fig.subplots_adjust(wspace=1, hspace=0)
+        count = 1
         dog_images = self.generateDoGImages(gaussian_images)
-        # for image in dog_images[0]:
-        #     cv2.imshow("dog_images", image)
-        #     cv2.waitKey(0) 
+        for idx in range(len(dog_images)):
+            for i, images in enumerate(dog_images):
+                if count == 45:
+                    count -=1
+                ax = plt.subplot(len(dog_images[0]), len(dog_images), count)
+                ax.set_xticklabels([])
+                ax.set_yticklabels([])
+                if idx == 0:
+                    ax.set_title(f"Octave {i+1}")
+                ax.axis('off')   
+                ax.set_aspect('equal')
+                if count == len(dog_images.flatten())-1:
+                    print("gottem")
+                else:
+                    plt.imshow(dog_images[i][idx])
+                count +=1
+        plt.show()
+        fig.subplots_adjust(wspace=1, hspace=0)
+        
         keypoints = self.findScaleSpaceExtrema(gaussian_images, dog_images, num_intervals, sigma, image_border_width)
         keypoints.sort(key=lambda x: x.response, reverse=True)
         print([keypoint.response for keypoint in keypoints])
