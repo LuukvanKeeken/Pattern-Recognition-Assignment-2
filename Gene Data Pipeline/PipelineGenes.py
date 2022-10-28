@@ -26,12 +26,11 @@ labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
 GridSearchResultsFile = './Gene Data Pipeline/Data/GridSearch.npy'
 evaluationResultsFile = './Gene Data Pipeline/Data/EvaluationResults.npy'
 
-LoadDataset = False
 
 class Pipeline:
     def __init__(self):
         # The purpose of this function is to speed up debugging by not having to read the data set each run
-        if (path.exists(rawDataFile)==False or path.exists(labelsFile)==False or path.exists(labelsNameFile)==False or LoadDataset): 
+        if (path.exists(rawDataFile)==False or path.exists(labelsFile)==False or path.exists(labelsNameFile)==False): 
             # Read data
             self.rawData = genfromtxt(dataFileName, skip_header=True, delimiter=',')[:,1:] # shape is 802x20532 
             
@@ -71,6 +70,18 @@ class Pipeline:
         self.testY = self.dataY[len(self.dataY)-testSetCount:len(self.dataY)]
 
     def preProcess(self):
+        # Augment the training data
+        samplesPerClass = [0]*len(self.trainY)
+        for label in self.trainY:
+            samplesPerClass[label] +=1
+        samplesPerClass = np.max(samplesPerClass)
+        oversample = SMOTE(sampling_strategy = {0:samplesPerClass, 1:samplesPerClass, 2:samplesPerClass, 3:samplesPerClass, 4:samplesPerClass}, random_state=27)
+        augmentedTrainX, self.augmentedTrainY = oversample.fit_resample(self.rawTrainX, self.trainY)
+
+        # Normalize the whole data set for clustering
+        self.dataSetX = (self.rawData-np.mean(self.rawData))/np.std(self.rawData)
+        
+        # Normalize the original train data
         trainingMean = np.mean(self.rawTrainX, axis=0) 
         centeredTrainingData = self.rawTrainX - trainingMean
         trainingSD = np.std(centeredTrainingData, axis=0)
@@ -78,14 +89,11 @@ class Pipeline:
         nonZeroSD = np.delete(trainingSD,zeroColumns,axis=0)
         self.trainX = np.delete(centeredTrainingData,zeroColumns,axis=1)/nonZeroSD
 
-        # Apply same normalization on the test data
+        # Normalize original test set with the normalization parameters from the original train set
         centeredTestingData = self.rawTestX - trainingMean
         self.testX = np.delete(centeredTestingData,zeroColumns,axis=1)/nonZeroSD
 
-        # Augment the training data
-        samplerPerClass = 273
-        oversample = SMOTE(sampling_strategy = {0:samplerPerClass, 1:samplerPerClass, 2:samplerPerClass, 3:samplerPerClass, 4:samplerPerClass}, random_state=27)
-        augmentedTrainX, self.augmentedTrainY = oversample.fit_resample(self.rawTrainX, self.trainY)
+        # Normalize the augmented train data
         augmentedMean = np.mean(augmentedTrainX, axis=0) 
         augmentedCenteredData = augmentedTrainX - augmentedMean
         augmentedSD = np.std(augmentedCenteredData, axis=0)
@@ -93,12 +101,10 @@ class Pipeline:
         augmentedNonZeroSD = np.delete(augmentedSD,augmentedZeroColumns,axis=0)
         self.augmentedTrainX = np.delete(augmentedCenteredData,augmentedZeroColumns,axis=1)/augmentedNonZeroSD
 
-        # Apply same normalization on the test data
+        # Normalize augmented test set with the normalization parameters from the augmented train set
         augmentedCenteredTestingData = self.rawTestX - augmentedMean
         self.augmentedTestX = np.delete(augmentedCenteredTestingData,augmentedZeroColumns,axis=1)/augmentedNonZeroSD
 
-        # Preprocess the full data set as well for clustering
-        self.dataSetX = (self.rawData-np.mean(self.rawData))/np.std(self.rawData)
 
     def pcaSearch(self):
         n_comps = len(self.trainX)
@@ -124,7 +130,6 @@ class Pipeline:
         dataSetX = dataSetPca.fit_transform(self.dataSetX)
         return reducedDimensionsData, AugmentedReducedDimensionsData, dataSetX
 
-# Grid search on training data. Both original and augmented 
     def gridSearch(self, pcaComponentSearch):
         # If a grid search already is performed, load the file to only search new components
         if path.exists(GridSearchResultsFile):
@@ -219,7 +224,6 @@ class Pipeline:
         with open(GridSearchResultsFile, 'wb') as fp:
             pickle.dump(gridSearchResults, fp)
     
-# Evaluation on the test data
     def evaluateModels(self, bestKnnPca,bestLrPca,bestBayesPca, bestFcMeansPca):
         # Open de search results to load the optimal model parameters
         with open (GridSearchResultsFile, 'rb') as fp:
