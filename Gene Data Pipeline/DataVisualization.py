@@ -5,6 +5,7 @@ from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from sklearn.metrics import confusion_matrix
+from sklearn.metrics import precision_score, recall_score, f1_score, accuracy_score
 
 def dataSetSummary():
     # count number of samples per class
@@ -88,8 +89,8 @@ def featureExtraction(numberOfComponents):
         pointsTwo = twoDimensionData[indicesOfClass]
         pointsThree = threeDimensionData[indicesOfClass]
         ax1.hist(pointsOne, alpha=0.5)
-        ax2.scatter(pointsTwo[0],pointsTwo[1])
-        ax3.scatter(pointsThree[0],pointsThree[1],pointsThree[2],label=str(index))
+        ax2.scatter(pointsTwo[:,0],pointsTwo[:,1])
+        ax3.scatter(pointsThree[:,0],pointsThree[:,1],pointsThree[:,2],label=str(index))
     ax1.set(title = "1 component", xlabel='Feature 1')
     ax2.set(title = "2 components", xlabel='Feature 1', ylabel='Feature 2')
     ax3.set(title = "3 components", xlabel='Feature 1', ylabel='Feature 2', zlabel='Feature 3')
@@ -215,6 +216,9 @@ def plotConfusionMatrix(name, dimensions, augmented, predictions):
         fileName += "Original"
 
     confusionMatrix = confusion_matrix(predictions[:,0],predictions[:,1])
+    #print(title + " Precision: "+str(round(precision_score(predictions[:,0],predictions[:,1], average='weighted'),3)))
+    #print(title + " Recall: "+str(round(recall_score(predictions[:,0],predictions[:,1], average='weighted'),3)))
+    print(title + " F1 Score: "+str(round(f1_score(predictions[:,0],predictions[:,1], average='weighted'),3)))
 
     fig, ax = plt.subplots(figsize=(7.5, 7.5))
     ax.matshow(confusionMatrix, cmap=plt.cm.Blues, alpha=0.3)
