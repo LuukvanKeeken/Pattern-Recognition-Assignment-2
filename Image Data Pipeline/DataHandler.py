@@ -1,9 +1,10 @@
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import cv2
 import os
 import random
-
+from collections import Counter
 
 class DataHandler:
     def __init__(self):
@@ -11,7 +12,6 @@ class DataHandler:
         self.class_labels = []
 
     def loadData(self, img_folder):
-
         for class_label in os.listdir(img_folder):
             for file in os.listdir(os.path.join(img_folder, class_label)):
                 image_path = os.path.join(img_folder, class_label,  file)
@@ -30,10 +30,11 @@ class DataHandler:
         plt.savefig("Figures/ExampleImages.png")
 
     def showClassDistribution(self):
-        plt.hist(self.class_labels)
-        plt.xticks(self.class_labels, fontsize=12)
-        plt.savefig("Figures/ClassDistribution.png")
-        plt.show()
+        counts = Counter(self.class_labels)
+        ticks = range(len(counts))
+        df = pd.DataFrame.from_dict(counts, orient='index')
+        df.plot(kind='barh', legend=False, title='Class distribution of BigCats dataset')
+        plt.savefig("Figures/ClassDistribution.pdf")
 
     def convertLabelsToNumeric(self):
         # Convert class labels to numeric values
@@ -78,7 +79,6 @@ class DataHandler:
         return output
 
     def preprocessData(self):
-        # For now only flatten the images
         images = np.array(self.img_data)
         self.img_data = images.reshape((len(self.img_data), -1))
         # salt_and_pepper_images = np.array([self.apply_salt_and_pepper_noise(image, 0.5) for image in images])

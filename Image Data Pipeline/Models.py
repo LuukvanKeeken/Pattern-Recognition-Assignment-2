@@ -28,9 +28,3 @@ class SVM:
         print(f"Confusion matrix:\n{disp.confusion_matrix}")
 
         plt.show()
-
-
-class DecisionTree:
-
-    def __init__(self):
-        pass
