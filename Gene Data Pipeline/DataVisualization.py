@@ -58,7 +58,7 @@ def PcaAnalysis():
     fig.tight_layout()
     plt.savefig("./Figures/GenesPcaVariance.png")
 
-def featureExtraction(numberOfComponents):
+def featureExtraction():
     # TODO: als we dit in het report gebruiken dan iedere data point de kleur van de class geven.
     pca = PCA(1)
     oneDimensionData = pca.fit_transform(normalizedX)
@@ -210,11 +210,16 @@ def plotEvaluationResults(evaluationResults):
 
 if __name__=="__main__":
     # File locations
+    figuresDirectory='./Gene Data Pipeline/Data/'
     rawDataFile = './Gene Data Pipeline/Data/rawData.npy'
     labelsFile = './Gene Data Pipeline/Data/labels.npy'
     labelsNameFile = './Gene Data Pipeline/Data/labelNames.npy'
     GridSearchFile = './Gene Data Pipeline/Data/GridSearch.npy'
     evaluationResultsFile = './Gene Data Pipeline/Data/EvaluationResults.npy'
+    
+    if not os.path.exists(figuresDirectory):
+        os.makedirs(figuresDirectory)
+
 
     # Load data
     rawData = np.load(rawDataFile)
@@ -230,7 +235,7 @@ if __name__=="__main__":
     # Plot figures conserning the data set exploration
     dataSetSummary()
     PcaAnalysis()
-    featureExtraction(2)
+    featureExtraction()
 
     with open (GridSearchFile, 'rb') as fp:
         results = np.array(pickle.load(fp))   
@@ -241,6 +246,5 @@ if __name__=="__main__":
     plotClusterGridPerformance(results)
 
     with open (evaluationResultsFile, 'rb') as fp:
-        evaluationResults = np.array(pickle.load(fp))  
-    
+        evaluationResults = np.array(pickle.load(fp))    
     plotEvaluationResults(evaluationResults)
