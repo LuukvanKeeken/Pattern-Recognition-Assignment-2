@@ -18,10 +18,8 @@ from Validator import Validator
 if __name__=="__main__":
     
     data_dir = f"BigCats{os.sep}"
-    IMG_WIDTH = 50
-    IMG_HEIGHT = 50
     dh = DataHandler()
-    dh.loadData(data_dir, IMG_WIDTH, IMG_HEIGHT)
+    dh.loadData(data_dir)
 
     # show example images:
     dh.showExampleImages()
