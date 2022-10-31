@@ -17,7 +17,7 @@ def main():
     model_type = sys.argv[2]
 
     # Load and process Data
-    data_dir = f"BigCats{os.sep}"
+    data_dir = f"Data\BigCats{os.sep}"
     dh = DataHandler()
     dh.load_data(data_dir)
     dh.plot_class_distribution()
