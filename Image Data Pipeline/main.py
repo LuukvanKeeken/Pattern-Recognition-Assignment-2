@@ -21,7 +21,6 @@ def main():
     dh = DataHandler()
     dh.load_data(data_dir)
     dh.plot_class_distribution()
-    dh.show_example_images()
     images = dh.preprocess_data(data_type)
 
     # Make Train - Test split

@@ -5,8 +5,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.cluster import KMeans
 from scipy.spatial.distance import cdist
 from DataHandler import DataHandler
-from SIFT import SIFT
-from Models import SVM
 import cv2
 import os
 import numpy as np

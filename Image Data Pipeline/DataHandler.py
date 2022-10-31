@@ -23,16 +23,6 @@ class DataHandler:
                 self.img_data.append(image)
                 self.class_labels.append(class_label)
 
-    def show_example_images(self):
-        """Shows five random images out of the dataset"""
-        plt.figure(figsize=(20, 6))
-        for i in range(5):
-            idx = random.choice(range(len(self.img_data)))
-            ax = plt.subplot(1, 5, i+1)
-            ax.title.set_text(self.class_labels[idx])
-            plt.imshow(self.img_data[idx])
-        plt.savefig("Figures/ExampleImages.png")
-
     def plot_class_distribution(self):
         """Plots a histogram containing the class distribution"""
         counts = Counter(self.class_labels)
