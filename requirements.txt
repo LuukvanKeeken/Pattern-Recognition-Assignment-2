@@ -1,0 +1,11 @@
+sklearn
+numpy
+pandas
+matplotlib
+imblearn
+fuzzy-c-means
+seaborn
+opencv-python
+
+
+

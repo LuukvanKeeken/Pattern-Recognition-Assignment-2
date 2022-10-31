@@ -1,0 +1,2 @@
+mkdir Figures
+mkdir saves
