@@ -13,7 +13,23 @@ Make sure you have Python **3.7.6** or higher installed on your system. Then run
 ```bash
 pip install -r requirements.txt
 ```
-    
+Additionally, please create the following structure with the assignment datasets in the root directory:
+
+```bash
+├───Data
+│   ├───BigCats
+│   │   ├───Cheetah
+│   │   ├───Jaguar
+│   │   ├───Leopard
+│   │   ├───Lion
+│   │   └───Tiger
+│   └───Genes
+|   |   |___data.csv
+|   |   |___labels.csv
+|   |
+|   |___creditcard.csv
+```
+
 ## Usage
 Before running any of the following pipelines, make sure you are the **root** folder. Before running 
 any of prepared pipelines, prepare your environment by running:
