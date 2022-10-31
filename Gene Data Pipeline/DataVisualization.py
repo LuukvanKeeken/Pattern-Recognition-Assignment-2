@@ -1,5 +1,6 @@
 import os
 import pickle
+from random import sample
 import numpy as np
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
@@ -13,6 +14,10 @@ def dataSetSummary():
     for label in labels:
         samplesPerClass[label] +=1
     leastItems = np.min(samplesPerClass)
+
+    plt.barh(labelNames,samplesPerClass)
+    plt.title("Class distribution of Genes dataset")
+    plt.savefig("./Figures/GenesClassDistribution.png", dpi = 300, bbox_inches='tight')
 
     classWeights={}
     for index, i in enumerate(samplesPerClass):
