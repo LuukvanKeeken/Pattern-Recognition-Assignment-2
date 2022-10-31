@@ -5,15 +5,31 @@ from sklearn.preprocessing import normalize
 import numpy as np
 from sklearn.decomposition import PCA
 from scipy.spatial.distance import cdist
+import matplotlib.pyplot as plt
+import copy
 
 
 class SIFTFeatureExtractor():
     def __init__(self):
         pass
 
+    def extract_features(self, X_train, y_train, n_keypoints, n_clusters, X_test=None, y_test=None):
+        descriptors_train = self.build_descriptors(
+            X_train, n_keypoints, "descriptors_train.npy")
+        vocab = self.build_vocab(descriptors_train, n_clusters)
+        train_histograms = self.build_histograms(
+            descriptors_train, y_train, n_keypoints, vocab, filename="histograms_train")
+        if X_test and y_test:
+            descriptors_test = self.build_descriptors(
+                X_test, n_keypoints, "descriptors_test.npy")
+            test_histograms = self.build_histograms(
+                descriptors_test, y_test, n_keypoints, vocab, filename="histograms_test")
+            return train_histograms, test_histograms
+        return train_histograms, None
+
     def build_vocab(self, descriptors, n_clusters):
-        print(descriptors)
-        k_means = KMeans(n_clusters=n_clusters, random_state=0).fit(descriptors)
+        k_means = KMeans(n_clusters=n_clusters,
+                         random_state=0).fit(descriptors)
         return k_means
 
     def plot_keypoints(self, img, keypoints):
@@ -47,6 +63,8 @@ class SIFTFeatureExtractor():
         sift = cv2.SIFT_create()
         descriptors = []
         for i, img in enumerate(images):
+            base_image2 = img
+            base_image3 = copy.copy(base_image2)
             print(f"{i}/{len(images)}")
             keypoints, descriptor = sift.detectAndCompute(img, None)
             keypoints = np.array(keypoints)
