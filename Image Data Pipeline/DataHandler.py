@@ -14,7 +14,7 @@ class DataHandler:
         self.img_data = []
         self.class_labels = []
 
-    def loadData(self, img_folder):
+    def load_data(self, img_folder):
         """Loads images from given class folders"""
         for class_label in os.listdir(img_folder):
             for file in os.listdir(os.path.join(img_folder, class_label)):
@@ -23,7 +23,7 @@ class DataHandler:
                 self.img_data.append(image)
                 self.class_labels.append(class_label)
 
-    def showExampleImages(self):
+    def show_example_images(self):
         """Shows five random images out of the dataset"""
         plt.figure(figsize=(20, 6))
         for i in range(5):
@@ -33,7 +33,7 @@ class DataHandler:
             plt.imshow(self.img_data[idx])
         plt.savefig("Figures/ExampleImages.png")
 
-    def plotClassDistribution(self):
+    def plot_class_distribution(self):
         """Plots a histogram containing the class distribution"""
         counts = Counter(self.class_labels)
         ticks = range(len(counts))
@@ -41,14 +41,6 @@ class DataHandler:
         df.plot(kind='barh', legend=False,
                 title='Class distribution of BigCats dataset')
         plt.savefig("Figures/ClassDistribution.pdf")
-
-    def convertLabelsToNumeric(self):
-        """Converts class strings to numerical labels"""
-        target_dict = {k: v for v, k in enumerate(
-            np.unique(self.class_labels))}
-        self.class_labels = [target_dict[self.class_labels[i]]
-                             for i in range(len(self.class_labels))]
-        return target_dict
 
     def convert_to_greyscale(self, img):
         return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -82,7 +74,7 @@ class DataHandler:
         cv2.waitKey(0)
         return output
 
-    def preprocessData(self, data_type):
+    def preprocess_data(self, data_type):
         """Converts images to right format for SIFT and optionally applies augmentation"""
         if data_type == "reduced" or data_type == "augmented":
             images = np.array([self.convert_to_greyscale(img)
@@ -92,19 +84,20 @@ class DataHandler:
                               for img in self.img_data])
         return images
 
-    def augmentData(self, images):
+    def augment_data(self, images):
         augmented = np.array(
             [self.apply_salt_and_pepper_noise(image, 0.5) for image in images])
         return augmented
 
-    def plotConfusionMatrix(self, model_type, data_type, predictions, true_labels, labelNames=["Cheetah", "Jaguar", "Leopard", "Lion", "Tiger"]):
+    def plot_confusion_matrix(self, model_type, data_type, predictions, true_labels, labelNames=["Cheetah", "Jaguar", "Leopard", "Lion", "Tiger"]):
+        """Plot a confusion matrix based on the made predictions and save it according to model and data type."""
         title = "Confusion matrix " + model_type
         fileName = "BigCatsConfusionMatrix"+model_type
 
-        if data_type=="augmented":
+        if data_type == "augmented":
             title += " on the augmented"
             fileName += "Augmented"
-        elif data_type=="reduced":
+        elif data_type == "reduced":
             title += " reduced data set"
             fileName += "sift"
         else:

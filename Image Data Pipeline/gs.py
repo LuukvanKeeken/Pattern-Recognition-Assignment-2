@@ -10,19 +10,17 @@ from Models import SVM
 import cv2
 import os
 import numpy as np
-import pickle
 from GridSearch import GridSearch
-from Validator import Validator
 import sys
 
 
 def main():
     data_dir = f"BigCats{os.sep}"
     dh = DataHandler()
-    dh.loadData(data_dir)
+    dh.load_data(data_dir)
     data_type = sys.argv[1]
     # preprocess data
-    images = dh.preprocessData(data_type)
+    images = dh.preprocess_data(data_type)
 
     # Make Train - Test split
     X_train, X_test, y_train, y_test = train_test_split(
@@ -30,12 +28,12 @@ def main():
     )
 
     if data_type == "augmented":
-        X_train = np.append(images, dh.augmentData(X_train), axis=0)
+        X_train = np.append(images, dh.augment_data(X_train), axis=0)
         y_train += y_train
 
     # Perform gridsearch to find optimal params
     gs = GridSearch(X_train, y_train, data_type)
-    gs.gridSearch()
+    gs.gridsearch()
 
 
 if __name__ == "__main__":

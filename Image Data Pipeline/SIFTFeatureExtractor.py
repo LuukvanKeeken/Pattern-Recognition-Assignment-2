@@ -14,6 +14,7 @@ class SIFTFeatureExtractor():
         pass
 
     def extract_features(self, X_train, y_train, n_keypoints, n_clusters, X_test=None, y_test=None):
+        """Perform the full SIFT bag of visual words algorithm"""
         descriptors_train = self.build_descriptors(
             X_train, n_keypoints, "descriptors_train.npy")
         vocab = self.build_vocab(descriptors_train, n_clusters)
@@ -28,11 +29,13 @@ class SIFTFeatureExtractor():
         return train_histograms, None
 
     def build_vocab(self, descriptors, n_clusters):
+        """Cluster the descriptors to get a vocabulary of n words"""
         k_means = KMeans(n_clusters=n_clusters,
                          random_state=0).fit(descriptors)
         return k_means
 
     def plot_keypoints(self, img, keypoints):
+        """Plot the SIFT keypoints in an image"""
         for kp in keypoints:
             img = cv2.drawMarker(img,
                                  (int(kp[0].pt[0]), int(kp[0].pt[1])),
@@ -45,6 +48,7 @@ class SIFTFeatureExtractor():
         cv2.waitKey(0)
 
     def build_histograms(self, descriptors, y, N_KEYPOINTS, vocab, filename="histograms.npy"):
+        """Build histograms based on the computed vocabulary and the distance of image descriptors to that vocabulary"""
         histograms = []
         # Reshape back into per image
         descriptors = descriptors.reshape((len(y), N_KEYPOINTS, 128))
@@ -60,11 +64,10 @@ class SIFTFeatureExtractor():
         return histograms
 
     def build_descriptors(self, images, N_KEYPOINTS, filename):
+        """Run SIFT to compute the local features of an image"""
         sift = cv2.SIFT_create()
         descriptors = []
         for i, img in enumerate(images):
-            base_image2 = img
-            base_image3 = copy.copy(base_image2)
             print(f"{i}/{len(images)}")
             keypoints, descriptor = sift.detectAndCompute(img, None)
             keypoints = np.array(keypoints)
